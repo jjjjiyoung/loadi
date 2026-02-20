@@ -140,12 +140,30 @@ class LoadiEngine {
             this.player.y = this.canvas.height / 2;
             this.speed = 3.5 + (seed % 2);
             this.gravity = (0.25 + (seed % 2) * 0.05) * s;
-            this.jumpPower = (6 + (seed % 3) * 0.5) * s; // Lighter jump for flappy
+            this.jumpPower = (6 + (seed % 3) * 0.5) * s;
+        } else if (type === 'MAZE') {
+            this.player.x = this.canvas.width / 2;
+            this.player.y = this.canvas.height / 2;
+            this.speed = 2.5 * s;
+            this.dots = [];
+            // Initial dots
+            for(let i=0; i<10; i++) this.spawnDot();
         }
         
         this.player.dy = 0;
+        this.player.dx = 0;
         this.player.grounded = false;
         this.trail = [];
+    }
+
+    spawnDot() {
+        const s = this.scale || 1;
+        this.dots.push({
+            x: Math.random() * (this.canvas.width - 10 * s) + 5 * s,
+            y: Math.random() * (this.canvas.height - 10 * s) + 5 * s,
+            w: 6 * s,
+            h: 6 * s
+        });
     }
 
     handleInput() {
@@ -167,21 +185,70 @@ class LoadiEngine {
 
         this.difficulty = 1 + (this.frame / 2000);
         const s = this.scale || 1;
-        const currentSpeed = this.speed * this.difficulty * s;
+        const currentSpeed = this.speed * this.difficulty;
         const spawnRate = Math.max(15, Math.floor(60 / this.difficulty));
 
         if (this.config.autoPlay) this.autoPlayBot(currentSpeed);
 
         // Update trail
-        this.trail.unshift({ x: this.player.x, y: this.player.y });
-        if (this.trail.length > 5) this.trail.pop();
+        if (this.config.gameType !== 'MAZE') {
+            this.trail.unshift({ x: this.player.x, y: this.player.y });
+            if (this.trail.length > 5) this.trail.pop();
+        }
 
         if (this.config.gameType === 'RUNNER') this.updateRunner(currentSpeed, spawnRate);
         else if (this.config.gameType === 'DODGE') this.updateDodge(currentSpeed, spawnRate);
         else if (this.config.gameType === 'FLAPPY') this.updateFlappy(currentSpeed, spawnRate);
+        else if (this.config.gameType === 'MAZE') this.updateMaze(currentSpeed, spawnRate);
 
         this.frame++;
-        this.score = Math.floor(this.frame / 10);
+        if (this.config.gameType !== 'MAZE') this.score = Math.floor(this.frame / 10);
+    }
+
+    updateMaze(speed, spawnRate) {
+        const s = this.scale || 1;
+        
+        // 4-Way Movement
+        if (this.keys['ArrowUp']) this.player.y -= speed;
+        if (this.keys['ArrowDown']) this.player.y += speed;
+        if (this.keys['ArrowLeft']) this.player.x -= speed;
+        if (this.keys['ArrowRight']) this.player.x += speed;
+
+        // Clamp to screen
+        this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
+        this.player.y = Math.max(0, Math.min(this.canvas.height - this.player.h, this.player.y));
+
+        // Collect Dots
+        for (let i = this.dots.length - 1; i >= 0; i--) {
+            if (this.checkCollision(this.player, this.dots[i])) {
+                this.dots.splice(i, 1);
+                this.score += 10;
+                this.spawnDot();
+            }
+        }
+
+        // Spawn Enemies (Ghosts)
+        if (this.frame % (spawnRate * 2) === 0 && this.obstacles.length < 4) {
+            this.obstacles.push({
+                x: Math.random() > 0.5 ? 0 : this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                w: 20 * s,
+                h: 20 * s,
+                type: 'GHOST'
+            });
+        }
+
+        // Move Ghosts (Simple Chasing AI)
+        this.obstacles.forEach(obs => {
+            const dx = this.player.x - obs.x;
+            const dy = this.player.y - obs.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist > 0) {
+                obs.x += (dx / dist) * speed * 0.6;
+                obs.y += (dy / dist) * speed * 0.6;
+            }
+            if (this.checkCollision(this.player, obs)) this.onHit();
+        });
     }
 
     updateRunner(speed, spawnRate) {
@@ -302,6 +369,29 @@ class LoadiEngine {
                 const gapY = incoming.y === 0 ? incoming.h + 35 * s : incoming.y - 35 * s;
                 if (this.player.y + this.player.h/2 > gapY) this.handleInput();
             }
+        } else if (this.config.gameType === 'MAZE') {
+            // Target nearest dot
+            if (this.dots && this.dots.length > 0) {
+                const nearest = this.dots.reduce((prev, curr) => {
+                    const d1 = Math.hypot(this.player.x - prev.x, this.player.y - prev.y);
+                    const d2 = Math.hypot(this.player.x - curr.x, this.player.y - curr.y);
+                    return d1 < d2 ? prev : curr;
+                });
+                
+                if (nearest.x > this.player.x) this.player.x += speed * 0.5;
+                else this.player.x -= speed * 0.5;
+                if (nearest.y > this.player.y) this.player.y += speed * 0.5;
+                else this.player.y -= speed * 0.5;
+            }
+
+            // Avoid nearest ghost
+            const ghost = this.obstacles.find(o => Math.hypot(this.player.x - o.x, this.player.y - o.y) < 50 * s);
+            if (ghost) {
+                if (ghost.x > this.player.x) this.player.x -= speed * 0.8;
+                else this.player.x += speed * 0.8;
+                if (ghost.y > this.player.y) this.player.y -= speed * 0.8;
+                else this.player.y += speed * 0.8;
+            }
         }
     }
 
@@ -327,6 +417,16 @@ class LoadiEngine {
         } else ctx.fillStyle = bg;
         
         ctx.fillRect(0, 0, w, h);
+
+        // Draw MAZE Dots
+        if (this.config.gameType === 'MAZE' && this.dots) {
+            ctx.fillStyle = theme.accentColor || '#ff0';
+            this.dots.forEach(dot => {
+                ctx.beginPath();
+                ctx.arc(dot.x + dot.w/2, dot.y + dot.h/2, dot.w/2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
 
         // Draw Theme Particles
         this.drawBackgroundParticles(ctx, w, h, s);
