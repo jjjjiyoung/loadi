@@ -3,191 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Types - Loadi Gen</title>
+    <title>Operational Modes - Loadi Gen</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .types-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-            max-height: 70vh;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
-        .type-card {
-            background: var(--glass);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1rem;
+        .types-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
-            transition: transform 0.3s, border-color 0.3s;
+        }
+        .types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            overflow-y: auto;
+            padding: 1rem;
+            flex: 1;
+        }
+        .type-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
         }
         .type-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.07);
             border-color: var(--accent);
+            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.2);
         }
         .type-preview {
             width: 100%;
-            height: 120px;
+            height: 160px;
             background: #000;
-            border-radius: 8px;
-            overflow: hidden;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .type-info h3 {
+        .type-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        .type-tag {
+            font-size: 0.65rem;
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--accent);
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            width: fit-content;
+            font-weight: 700;
+        }
+        .type-content h3 {
             margin: 0;
-            font-size: 1.2rem;
-            color: var(--accent);
+            font-size: 1.4rem;
+            letter-spacing: -1px;
         }
-        .type-info p {
-            margin: 0.5rem 0 0;
+        .type-desc {
             font-size: 0.85rem;
             color: var(--text-dim);
-            line-height: 1.4;
+            line-height: 1.5;
         }
-        .back-home {
-            position: absolute;
-            top: 2rem;
-            left: 2rem;
+        .type-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .meta-label { color: var(--accent); opacity: 0.7; margin-right: 5px; }
+        
+        .back-nav {
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .btn-back {
             color: var(--text);
             text-decoration: none;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.3s;
         }
-        .back-home:hover { color: var(--accent); }
-        
-        /* Custom scrollbar */
-        .types-grid::-webkit-scrollbar { width: 4px; }
+        .btn-back:hover { background: var(--glass); border-color: var(--accent); color: var(--accent); }
+
+        .types-grid::-webkit-scrollbar { width: 6px; }
         .types-grid::-webkit-scrollbar-track { background: transparent; }
-        .types-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        .types-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .types-grid::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        @media (max-width: 600px) {
+            .types-container { padding: 1rem; }
+            .types-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
     <div class="app-background"></div>
     
-    <a href="index.html" class="back-home">← BACK TO SYSTEM</a>
+    <div class="types-container">
+        <div class="back-nav">
+            <a href="index.html" class="btn-back">← SYSTEM_HOME</a>
+            <div class="status-text" style="color: var(--accent)">DIRECTORY_LISTING / ALL_MODES</div>
+        </div>
 
-    <div class="main-interface">
-        <header>
-            <div class="logo">GAME <span class="badge">TYPES</span></div>
-            <p class="subtitle">Explore all 6 operational game modes</p>
+        <header style="margin-bottom: 2rem;">
+            <div class="logo" style="font-size: 2.5rem; text-align: left;">OPERATIONAL <span class="badge">MODES</span></div>
+            <p class="subtitle" style="text-align: left;">Available logic engines for procedural deployment</p>
         </header>
 
-        <div class="types-grid">
-            <!-- Runner -->
-            <div class="type-card">
-                <div id="prev-runner" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>RUNNER</h3>
-                    <p>Classic side-scrolling action. Jump over obstacles and survive the increasing speed.</p>
-                </div>
-            </div>
-
-            <!-- Dodge -->
-            <div class="type-card">
-                <div id="prev-dodge" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>DODGE</h3>
-                    <p>Vertical falling obstacles. Move left and right to avoid cosmic debris.</p>
-                </div>
-            </div>
-
-            <!-- Flappy -->
-            <div class="type-card">
-                <div id="prev-flappy" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>FLAPPY</h3>
-                    <p>Counter gravity by flapping. Navigate through tight gaps in the environment.</p>
-                </div>
-            </div>
-
-            <!-- Maze -->
-            <div class="type-card">
-                <div id="prev-maze" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>MAZE</h3>
-                    <p>Retro grid exploration. Collect dots and avoid chasing entities.</p>
-                </div>
-            </div>
-
-            <!-- Shooter -->
-            <div class="type-card">
-                <div id="prev-shooter" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>SHOOTER</h3>
-                    <p>Combat engagement. Move horizontally and eliminate incoming threats.</p>
-                </div>
-            </div>
-
-            <!-- Jump -->
-            <div class="type-card">
-                <div id="prev-jump" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>JUMP</h3>
-                    <p>Infinite verticality. Bounce on platforms to reach record heights.</p>
-                </div>
-            </div>
-
-            <!-- Puzzle -->
-            <div class="type-card">
-                <div id="prev-puzzle" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>PUZZLE</h3>
-                    <p>Logic and matching. Align identical elements to clear the board.</p>
-                </div>
-            </div>
-
-            <!-- Stack -->
-            <div class="type-card">
-                <div id="prev-stack" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>STACK</h3>
-                    <p>Timing and precision. Stack moving blocks perfectly to build a tower.</p>
-                </div>
-            </div>
-
-            <!-- Gravity -->
-            <div class="type-card">
-                <div id="prev-gravity" class="type-preview"></div>
-                <div class="type-info">
-                    <h3>GRAVITY</h3>
-                    <p>Gravity defiance. Flip between floor and ceiling to avoid deadly spikes.</p>
-                </div>
-            </div>
+        <div class="types-grid" id="modes-grid">
+            <!-- Cards will be injected by script for cleaner maintenance -->
         </div>
     </div>
 
     <script src="loadi-engine.js"></script>
     <script>
-        const defaultConfig = {
-            theme: { background: '#000', playerColor: '#fff', obstacleColor: '#f00', accentColor: '#0ff' },
-            sprites: { player: null, obstacle: null },
-            autoPlay: true
-        };
-
         const modes = [
-            { id: 'prev-runner', type: 'RUNNER', cat: 'LAND' },
-            { id: 'prev-dodge', type: 'DODGE', cat: 'SPACE' },
-            { id: 'prev-flappy', type: 'FLAPPY', cat: 'AIR' },
-            { id: 'prev-maze', type: 'MAZE', cat: 'MAZE' },
-            { id: 'prev-shooter', type: 'SHOOTER', cat: 'SHOOTER' },
-            { id: 'prev-jump', type: 'JUMP', cat: 'JUMP' },
-            { id: 'prev-puzzle', type: 'PUZZLE', cat: 'PUZZLE' },
-            { id: 'prev-stack', type: 'STACK', cat: 'STACK' },
-            { id: 'prev-gravity', type: 'GRAVITY', cat: 'GRAVITY' }
+            { 
+                type: 'RUNNER', cat: 'LAND', 
+                desc: 'Standard side-scrolling survival. Speed increases with score.',
+                keywords: 'Mars, Desert, Run', input: 'SPACE / CLICK'
+            },
+            { 
+                type: 'DODGE', cat: 'SPACE', 
+                desc: 'Vertical debris evasion. High-precision movement required.',
+                keywords: 'Star, Meteor, Fall', input: 'ARROWS / TOUCH'
+            },
+            { 
+                type: 'FLAPPY', cat: 'AIR', 
+                desc: 'Anti-gravity navigation through atmospheric gaps.',
+                keywords: 'Bird, Sky, Plane', input: 'SPACE / CLICK'
+            },
+            { 
+                type: 'MAZE', cat: 'MAZE', 
+                desc: 'Grid-based exploration with entity avoidance and collection.',
+                keywords: 'Pacman, Ghost, Dot', input: 'ARROWS / SWIPE'
+            },
+            { 
+                type: 'SHOOTER', cat: 'SHOOTER', 
+                desc: 'Tactical engagement with auto-firing defensive systems.',
+                keywords: 'War, Battle, Gun', input: 'ARROWS / TOUCH'
+            },
+            { 
+                type: 'JUMP', cat: 'JUMP', 
+                desc: 'Infinite vertical ascension via reactive platforms.',
+                keywords: 'Cloud, Bounce, High', input: 'ARROWS / TOUCH'
+            },
+            { 
+                type: 'PUZZLE', cat: 'PUZZLE', 
+                desc: 'Match-3 logic sequencer. Swap elements to clear the grid.',
+                keywords: 'Gem, Match, Brain', input: 'MOUSE / TOUCH'
+            },
+            { 
+                type: 'STACK', cat: 'STACK', 
+                desc: 'Precision tower construction with dynamic block cutting.',
+                keywords: 'Tetris, Block, Build', input: 'SPACE / CLICK'
+            },
+            { 
+                type: 'GRAVITY', cat: 'GRAVITY', 
+                desc: 'Bi-polar orientation flipping. Floor and ceiling are both active.',
+                keywords: 'Flip, Magnet, Invert', input: 'SPACE / CLICK'
+            }
         ];
 
+        const grid = document.getElementById('modes-grid');
+        
         window.addEventListener('load', () => {
-            modes.forEach(mode => {
-                const config = JSON.parse(JSON.stringify(defaultConfig));
-                config.gameType = mode.type;
-                config.category = mode.cat;
-                new LoadiEngine(mode.id, config);
+            modes.forEach((mode, idx) => {
+                const card = document.createElement('div');
+                card.className = 'type-card';
+                card.innerHTML = `
+                    <div id="prev-${idx}" class="type-preview"></div>
+                    <div class="type-content">
+                        <span class="type-tag">${mode.cat}</span>
+                        <h3>${mode.type}</h3>
+                        <p class="type-desc">${mode.desc}</p>
+                        <div class="type-meta">
+                            <span><span class="meta-label">KEY:</span>${mode.keywords}</span>
+                            <span><span class="meta-label">IN:</span>${mode.input}</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+
+                // Initialize mini-engine
+                setTimeout(() => {
+                    new LoadiEngine(`prev-${idx}`, {
+                        gameType: mode.type,
+                        category: mode.cat,
+                        theme: { background: '#000', playerColor: '#fff', obstacleColor: '#ff0055', accentColor: '#00f2ff' },
+                        sprites: { player: null, obstacle: null },
+                        autoPlay: true
+                    });
+                }, 100 + idx * 100);
             });
         });
     </script>
