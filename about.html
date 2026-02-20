@@ -17,7 +17,9 @@
     <meta property="og:url" content="https://jjjjiyoung.github.io/loadi/about.html">
     <meta property="og:title" content="About Loadi - The Future of Loading Screens">
     <meta property="og:description" content="Learn how Loadi transforms boring wait times into interactive pixel fun with procedural AI.">
-    <meta property="og:image" content="https://raw.githubusercontent.com/jjjjiyoung/loadi/main/og-image.png">
+    <meta property="og:image" content="https://jjjjiyoung.github.io/loadi/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
 
     <link rel="stylesheet" href="style.css">
     <style>
@@ -75,12 +77,42 @@
             color: #fff;
             border-color: #fff;
         }
+        .close-btn {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            color: var(--text-dim);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            text-decoration: none;
+        }
+        .close-btn:hover {
+            background: var(--accent);
+            color: #000;
+            transform: rotate(90deg);
+            box-shadow: var(--accent-glow);
+            border-color: transparent;
+        }
     </style>
 </head>
 <body>
     <div class="app-background"></div>
     
     <div class="about-container">
+        <!-- Close Button -->
+        <a href="index.html" class="close-btn" title="Close and return to generator">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </a>
+
         <h1 class="hero-title">LOADI SYSTEM</h1>
         
         <div class="section">
