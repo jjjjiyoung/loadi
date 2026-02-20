@@ -78,22 +78,37 @@ class LoadiEngine {
     }
 
     resize() {
-        if (!this.container) return;
+        if (!this.container || !this.canvas) return;
         this.canvas.width = this.container.clientWidth || 300;
         this.canvas.height = this.container.clientHeight || 200;
-        this.scale = this.canvas.height / 200;
-        this.groundY = this.canvas.height - (30 * this.scale);
-        this.player.w = 20 * this.scale;
-        this.player.h = 20 * this.scale;
         
-        // Re-draw if game is paused/over
-        if (!this.isPlaying) this.draw();
+        // Ensure scale is never zero to avoid division/rendering issues
+        this.scale = Math.max(0.1, this.canvas.height / 200);
+        this.groundY = this.canvas.height - (30 * this.scale);
+        
+        if (this.player) {
+            this.player.w = 20 * this.scale;
+            this.player.h = 20 * this.scale;
+        }
+        
+        // Only draw if we have a context and theme
+        if (this.ctx && this.config && this.config.theme) {
+            try {
+                this.draw();
+            } catch (e) {
+                console.warn("Initial draw failed during resize:", e);
+            }
+        }
     }
 
     start() {
-        this.reset();
-        this.isPlaying = true;
-        this.loop();
+        try {
+            this.reset();
+            this.isPlaying = true;
+            this.loop();
+        } catch (e) {
+            console.error("Failed to start engine:", e);
+        }
     }
 
     reset() {
@@ -103,16 +118,18 @@ class LoadiEngine {
         this.obstacles = [];
         this.isGameOver = false;
         
-        const s = this.scale;
-        if (this.config.gameType === 'RUNNER') {
+        const s = this.scale || 1;
+        const type = this.config ? this.config.gameType : 'RUNNER';
+
+        if (type === 'RUNNER') {
             this.player.x = 50 * s;
             this.player.y = this.groundY - this.player.h;
             this.speed = 4.5;
-        } else if (this.config.gameType === 'DODGE') {
-            this.player.x = this.canvas.width / 2 - this.player.w / 2;
+        } else if (type === 'DODGE') {
+            this.player.x = (this.canvas.width / 2) - (this.player.w / 2);
             this.player.y = this.groundY - this.player.h;
             this.speed = 3;
-        } else if (this.config.gameType === 'FLAPPY') {
+        } else if (type === 'FLAPPY') {
             this.player.x = 50 * s;
             this.player.y = this.canvas.height / 2;
             this.speed = 3.5;
@@ -274,51 +291,59 @@ class LoadiEngine {
 
     draw() {
         const ctx = this.ctx;
+        if (!ctx || !this.config || !this.config.theme) return;
+
         const w = this.canvas.width;
         const h = this.canvas.height;
-        const s = this.scale;
+        const s = this.scale || 1;
         const theme = this.config.theme;
 
-        if (theme.background.includes('gradient')) {
+        // Background
+        const bg = theme.background || '#000';
+        if (bg.includes('gradient')) {
              const grd = ctx.createLinearGradient(0, 0, 0, h);
-             const colors = theme.background.match(/#[a-fA-F0-9]{6}/g);
-             if (colors) {
+             const colors = bg.match(/#[a-fA-F0-9]{6}/g);
+             if (colors && colors.length >= 2) {
                  grd.addColorStop(0, colors[0]);
                  grd.addColorStop(1, colors[1]);
                  ctx.fillStyle = grd;
              } else ctx.fillStyle = '#000';
-        } else ctx.fillStyle = theme.background;
+        } else ctx.fillStyle = bg;
         
         ctx.fillRect(0, 0, w, h);
 
         if (this.config.gameType !== 'FLAPPY') {
-            ctx.strokeStyle = theme.accentColor;
-            ctx.lineWidth = 2 * s;
+            ctx.strokeStyle = theme.accentColor || '#0ff';
+            ctx.lineWidth = Math.max(1, 2 * s);
             ctx.beginPath();
             ctx.moveTo(0, this.groundY);
             ctx.lineTo(w, this.groundY);
             ctx.stroke();
         }
 
-        ctx.fillStyle = theme.playerColor || '#fff';
+        const pColor = theme.playerColor || '#fff';
+        ctx.fillStyle = pColor;
         if (this.config.sprites && this.config.sprites.player) {
-            this.drawSprite(this.config.sprites.player, this.player.x, this.player.y, this.player.w, this.player.h, theme.playerColor, 0);
+            this.drawSprite(this.config.sprites.player, this.player.x, this.player.y, this.player.w, this.player.h, pColor, 0);
         } else {
             ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
         }
 
+        const oColor = theme.obstacleColor || '#f00';
         this.obstacles.forEach(obs => {
             const rotation = (obs.type === 'ZIGZAG' || obs.type === 'NORMAL') ? this.frame / 20 : 0;
             if (this.config.sprites && this.config.sprites.obstacle && obs.type !== 'PIPE') {
-                this.drawSprite(this.config.sprites.obstacle, obs.x, obs.y, obs.w, obs.h, theme.obstacleColor, rotation);
+                this.drawSprite(this.config.sprites.obstacle, obs.x, obs.y, obs.w, obs.h, oColor, rotation);
             } else {
-                ctx.fillStyle = theme.obstacleColor || '#f00';
+                ctx.fillStyle = oColor;
                 ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
             }
         });
 
-        ctx.fillStyle = theme.accentColor;
-        ctx.font = `${12 * s}px Courier New`;
+        const aColor = theme.accentColor || '#0ff';
+        ctx.fillStyle = aColor;
+        ctx.font = `${Math.floor(12 * s)}px Courier New`;
+        ctx.textAlign = 'left';
         ctx.fillText(`SCORE: ${this.score}`, 10 * s, 20 * s);
         ctx.fillText(`DIFF: ${this.difficulty.toFixed(1)}x`, 10 * s, 35 * s);
         
@@ -327,9 +352,9 @@ class LoadiEngine {
             ctx.fillRect(0, 0, w, h);
             ctx.fillStyle = '#fff';
             ctx.textAlign = 'center';
-            ctx.font = `${20 * s}px Courier New`;
+            ctx.font = `${Math.floor(20 * s)}px Courier New`;
             ctx.fillText("GAME OVER", w/2, h/2);
-            ctx.font = `${10 * s}px Courier New`;
+            ctx.font = `${Math.floor(10 * s)}px Courier New`;
             ctx.fillText("Click to Restart", w/2, h/2 + 30 * s);
             ctx.textAlign = 'left';
         }
