@@ -200,9 +200,115 @@ class LoadiEngine {
         else if (this.config.gameType === 'DODGE') this.updateDodge(currentSpeed, spawnRate);
         else if (this.config.gameType === 'FLAPPY') this.updateFlappy(currentSpeed, spawnRate);
         else if (this.config.gameType === 'MAZE') this.updateMaze(currentSpeed, spawnRate);
+        else if (this.config.gameType === 'SHOOTER') this.updateShooter(currentSpeed, spawnRate);
+        else if (this.config.gameType === 'JUMP') this.updateJump(currentSpeed, spawnRate);
 
         this.frame++;
         if (this.config.gameType !== 'MAZE') this.score = Math.floor(this.frame / 10);
+    }
+
+    updateShooter(speed, spawnRate) {
+        const s = this.scale || 1;
+        // Move
+        if (this.keys['ArrowLeft']) this.player.x -= 4 * s;
+        if (this.keys['ArrowRight']) this.player.x += 4 * s;
+        this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
+
+        // Auto Fire
+        if (this.frame % 15 === 0) {
+            this.bullets.push({ x: this.player.x + this.player.w/2 - 2*s, y: this.player.y, w: 4*s, h: 10*s });
+        }
+
+        // Bullets
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            this.bullets[i].y -= 7 * s;
+            if (this.bullets[i].y < 0) this.bullets.splice(i, 1);
+        }
+
+        // Spawn Enemies
+        if (this.frame % spawnRate === 0) {
+            this.obstacles.push({
+                x: Math.random() * (this.canvas.width - 20 * s),
+                y: -30 * s,
+                w: 25 * s,
+                h: 25 * s,
+                hp: 1
+            });
+        }
+
+        // Enemies & Collision
+        for (let i = this.obstacles.length - 1; i >= 0; i--) {
+            let obs = this.obstacles[i];
+            obs.y += speed * 0.8;
+            
+            // Player collision
+            if (this.checkCollision(this.player, obs)) this.onHit();
+
+            // Bullet collision
+            for (let b = this.bullets.length - 1; b >= 0; b--) {
+                if (this.checkCollision(this.bullets[b], obs)) {
+                    obs.hp--;
+                    this.bullets.splice(b, 1);
+                    if (obs.hp <= 0) {
+                        this.score += 50; // Bonus points
+                        this.obstacles.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+            if (obs.y > this.canvas.height) this.obstacles.splice(i, 1);
+        }
+    }
+
+    updateJump(speed, spawnRate) {
+        const s = this.scale || 1;
+        
+        // Horizontal Move
+        if (this.keys['ArrowLeft']) this.player.x -= 5 * s;
+        if (this.keys['ArrowRight']) this.player.x += 5 * s;
+        
+        // Screen Wrap
+        if (this.player.x < -this.player.w) this.player.x = this.canvas.width;
+        if (this.player.x > this.canvas.width) this.player.x = -this.player.w;
+
+        // Physics
+        this.player.dy += 0.4 * s; // Gravity
+        this.player.y += this.player.dy;
+
+        // Platform Collision (Bounce)
+        if (this.player.dy > 0) {
+            this.platforms.forEach(p => {
+                if (this.player.x + this.player.w > p.x && this.player.x < p.x + p.w &&
+                    this.player.y + this.player.h > p.y && this.player.y + this.player.h < p.y + p.h + 10 * s) {
+                    this.player.dy = -this.jumpPower;
+                }
+            });
+        }
+
+        // Camera Scroll (Move platforms down instead of player up)
+        if (this.player.y < this.canvas.height / 2) {
+            const diff = this.canvas.height / 2 - this.player.y;
+            this.player.y = this.canvas.height / 2;
+            this.platforms.forEach(p => p.y += diff);
+            this.score += Math.floor(diff);
+        }
+
+        // Spawn Platforms
+        const topPlat = this.platforms.reduce((min, p) => p.y < min ? p.y : min, this.canvas.height);
+        if (topPlat > 50 * s) {
+            this.platforms.push({
+                x: Math.random() * (this.canvas.width - 40 * s),
+                y: topPlat - (Math.random() * 40 * s + 60 * s),
+                w: 40 * s,
+                h: 8 * s
+            });
+        }
+
+        // Remove old platforms
+        this.platforms = this.platforms.filter(p => p.y < this.canvas.height);
+
+        // Game Over
+        if (this.player.y > this.canvas.height) this.onHit();
     }
 
     updateMaze(speed, spawnRate) {
@@ -392,6 +498,20 @@ class LoadiEngine {
                 if (ghost.y > this.player.y) this.player.y -= speed * 0.8;
                 else this.player.y += speed * 0.8;
             }
+        } else if (this.config.gameType === 'SHOOTER') {
+            // Track nearest enemy x
+            const target = this.obstacles[0];
+            if (target) {
+                if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += speed;
+                else this.player.x -= speed;
+            }
+        } else if (this.config.gameType === 'JUMP') {
+            // Find platform above
+            const target = this.platforms.find(p => p.y < this.player.y && p.y > this.player.y - 150 * s);
+            if (target) {
+                if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += 4 * s;
+                else this.player.x -= 4 * s;
+            }
         }
     }
 
@@ -426,6 +546,18 @@ class LoadiEngine {
                 ctx.arc(dot.x + dot.w/2, dot.y + dot.h/2, dot.w/2, 0, Math.PI * 2);
                 ctx.fill();
             });
+        }
+
+        // Draw SHOOTER Bullets
+        if (this.config.gameType === 'SHOOTER' && this.bullets) {
+            ctx.fillStyle = '#ff0';
+            this.bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+        }
+
+        // Draw JUMP Platforms
+        if (this.config.gameType === 'JUMP' && this.platforms) {
+            ctx.fillStyle = theme.obstacleColor;
+            this.platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
         }
 
         // Draw Theme Particles

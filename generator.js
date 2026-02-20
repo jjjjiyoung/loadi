@@ -38,7 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
             CYBER: ['cyber', 'neon', 'matrix', 'glitch', 'robot', 'tech', 'digital', 'code', 'future', '네온', '로봇', '기술', '디지털'],
             FIRE: ['fire', 'flame', 'lava', 'volcano', 'hot', 'burn', 'sun', 'dragon', '불', '화염', '용암', '화산', '태양'],
             URBAN: ['city', 'street', 'car', 'building', 'traffic', 'urban', 'road', '도시', '도로', '빌딩', '자동차'],
-            MAZE: ['pacman', 'maze', 'ghost', 'dot', 'eat', 'cookie', 'pixel', 'retro', '팩맨', '미로', '유령', '복고']
+            MAZE: ['pacman', 'maze', 'ghost', 'dot', 'eat', 'cookie', 'pixel', 'retro', '팩맨', '미로', '유령', '복고'],
+            SHOOTER: ['shoot', 'gun', 'war', 'battle', 'laser', 'attack', 'tank', 'fighter', '총', '전쟁', '레이저', '슈팅'],
+            JUMP: ['jump', 'bounce', 'high', 'top', 'climb', 'spring', 'doodle', '점프', '구름', '높이', '등산']
         };
 
         for (const [theme, words] of Object.entries(themes)) {
@@ -53,6 +55,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const hue = Math.floor(seededRandom(seed) * 360);
         
         switch(category) {
+            case 'SHOOTER':
+                return {
+                    background: '#1a1a2e',
+                    playerColor: '#e94560', obstacleColor: '#16213e', accentColor: '#0f3460',
+                    gameType: 'SHOOTER'
+                };
+            case 'JUMP':
+                return {
+                    background: 'linear-gradient(to top, #a18cd1, #fbc2eb)',
+                    playerColor: '#fff', obstacleColor: '#8e44ad', accentColor: '#ffeaa7',
+                    gameType: 'JUMP'
+                };
             case 'MAZE':
                 return {
                     background: '#000000',
@@ -145,10 +159,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         case 'MAZE': // Pac-man Mouth
                             prob = (x > 1 && !(x > 4 && y > 2 && y < 6)) ? 0.1 : 0.8;
                             break;
+                        case 'SHOOTER': // Fighter Jet
+                            prob = (y > 4 || (y > 2 && x > 1)) ? 0.2 : 0.9;
+                            if (x === 0 && y > 1) prob = 0.9;
+                            break;
+                        case 'JUMP': // Bouncy Blob
+                            prob = (y > 2 && y < 6) ? 0.3 : 0.8;
+                            if (y === 7) prob = 0.1; // Feet
+                            break;
                     }
                 } else {
                     // Specialized Obstacles per Theme
                     switch(category) {
+                        case 'SHOOTER': // Enemy Ship
+                            prob = (y < 4 && x > 0) ? 0.3 : 0.8;
+                            break;
+                        case 'JUMP': // Platform
+                            prob = (y > 2 && y < 5) ? 0.1 : 0.9;
+                            break;
                         case 'MAZE': // Ghost shape
                             prob = (y > 1 && x > 0) ? 0.2 : 0.8;
                             if (y > 6 && (x === 1 || x === 3)) prob = 0.9;
