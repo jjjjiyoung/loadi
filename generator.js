@@ -17,68 +17,127 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
+            hash = hash & hash;
         }
         return Math.abs(hash);
     }
 
-    // Pseudo-random number generator based on seed
     function seededRandom(seed) {
         const x = Math.sin(seed++) * 10000;
         return x - Math.floor(x);
     }
 
-    function generatePalette(seed) {
-        const hue1 = Math.floor(seededRandom(seed) * 360);
-        const hue2 = (hue1 + 180) % 360; // Complementary
-        const hue3 = (hue1 + 40) % 360;  // Analogous
+    // Keyword Category Analysis
+    function analyzeKeyword(keyword) {
+        const kw = keyword.toLowerCase();
+        
+        const flightTerms = ['bird', 'fly', 'wing', 'sky', 'cloud', 'plane', 'bee', 'dragon', 'angel', 'butterfly', '새', '비행', '날개', '하늘', '구름'];
+        const spaceTerms = ['space', 'mars', 'star', 'moon', 'rocket', 'alien', 'galaxy', 'meteor', 'ufo', 'planet', 'cosmic', '우주', '화성', '별', '달', '로켓', '외계인'];
+        const waterTerms = ['fish', 'sea', 'ocean', 'water', 'shark', 'whale', 'swim', 'bubble', 'dive', '물고기', '바다', '물', '상어', '수영'];
 
-        return {
-            background: `hsl(${hue1}, 20%, 10%)`,
-            playerColor: `hsl(${hue3}, 80%, 60%)`,
-            obstacleColor: `hsl(${hue2}, 70%, 50%)`,
-            accentColor: `hsl(${hue3}, 100%, 70%)`
-        };
+        if (flightTerms.some(t => kw.includes(t))) return 'AIR';
+        if (spaceTerms.some(t => kw.includes(t))) return 'SPACE';
+        if (waterTerms.some(t => kw.includes(t))) return 'WATER';
+        
+        // Default based on seed if no match
+        const categories = ['LAND', 'AIR', 'SPACE', 'WATER'];
+        return categories[stringToSeed(kw) % categories.length];
     }
 
-    function generateSprite(seed) {
-        // More sophisticated 8x8 pixel icon generator
-        // Structure: 0-2 (Top/Head), 3-5 (Middle/Body), 6-7 (Bottom/Legs)
-        const grid = new Array(64).fill(0);
+    function getThemeByContext(category, seed) {
+        const hue = Math.floor(seededRandom(seed) * 360);
         
-        const getVal = (s, prob) => seededRandom(s) > prob ? 1 : 0;
+        switch(category) {
+            case 'AIR':
+                return {
+                    background: 'linear-gradient(to bottom, #1e3c72, #2a5298)',
+                    playerColor: '#fff',
+                    obstacleColor: '#f1c40f',
+                    accentColor: '#00f2ff',
+                    gameType: 'FLAPPY'
+                };
+            case 'SPACE':
+                return {
+                    background: '#050505',
+                    playerColor: '#00f2ff',
+                    obstacleColor: '#e74c3c',
+                    accentColor: '#9b59b6',
+                    gameType: 'DODGE'
+                };
+            case 'WATER':
+                return {
+                    background: '#002b36',
+                    playerColor: '#268bd2',
+                    obstacleColor: '#2aa198',
+                    accentColor: '#859900',
+                    gameType: 'FLAPPY'
+                };
+            default: // LAND
+                return {
+                    background: `hsl(${hue}, 20%, 10%)`,
+                    playerColor: `hsl(${(hue + 40) % 360}, 80%, 60%)`,
+                    obstacleColor: `hsl(${(hue + 180) % 360}, 70%, 50%)`,
+                    accentColor: `hsl(${(hue + 40) % 360}, 100%, 70%)`,
+                    gameType: 'RUNNER'
+                };
+        }
+    }
+
+    function generateSprite(seed, category, isPlayer = true) {
+        const grid = new Array(64).fill(0);
+        const rand = (s) => seededRandom(s);
 
         for (let y = 0; y < 8; y++) {
-            let prob = 0.5;
-            if (y < 2) prob = 0.6; // Head part (tends to be narrower)
-            if (y >= 2 && y <= 5) prob = 0.3; // Body part (thicker)
-            if (y > 5) prob = 0.7; // Legs (sparse)
+            for (let x = 0; x < 4; x++) {
+                let prob = 0.5;
+                
+                if (isPlayer) {
+                    if (category === 'SPACE') { // Rocket-ish
+                        prob = (x < 2 && y > 1 && y < 7) ? 0.2 : 0.8;
+                        if (y === 1 && x === 1) prob = 0.1;
+                    } else if (category === 'AIR' || category === 'WATER') { // Bird/Fish-ish
+                        prob = (y > 2 && y < 6) ? 0.2 : 0.7;
+                        if (x > 1) prob -= 0.2;
+                    }
+                } else { // Obstacle
+                    if (category === 'SPACE') prob = 0.4; // Meteors
+                    else prob = 0.3; // Generic
+                }
 
-            for (let x = 1; x < 4; x++) { // Center 6 columns (1 to 6)
-                const val = getVal(seed + y * 13 + x, prob);
+                const val = rand(seed + y * 13 + x) > prob ? 1 : 0;
                 grid[y * 8 + x] = val;
-                grid[y * 8 + (7 - x)] = val; // Symmetrical
+                grid[y * 8 + (7 - x)] = val; // Symmetry
             }
         }
         
-        // Ensure some core pixels are always there (the "soul" of the icon)
-        grid[3 * 8 + 3] = 1; grid[3 * 8 + 4] = 1;
-        grid[4 * 8 + 3] = 1; grid[4 * 8 + 4] = 1;
-        
+        // Ensure core
+        if (isPlayer) {
+            grid[3 * 8 + 3] = 1; grid[3 * 8 + 4] = 1;
+            grid[4 * 8 + 3] = 1; grid[4 * 8 + 4] = 1;
+        }
+
         return grid;
     }
 
     function generateGameConfig(keyword) {
         const seed = stringToSeed(keyword);
-        const palette = generatePalette(seed);
+        const category = analyzeKeyword(keyword);
+        const theme = getThemeByContext(category, seed);
         
         return {
             keyword: keyword,
             seed: seed,
-            theme: palette,
+            category: category,
+            theme: {
+                background: theme.background,
+                playerColor: theme.playerColor,
+                obstacleColor: theme.obstacleColor,
+                accentColor: theme.accentColor
+            },
+            gameType: theme.gameType,
             sprites: {
-                player: generateSprite(seed + 500),
-                obstacle: generateSprite(seed + 999)
+                player: generateSprite(seed + 500, category, true),
+                obstacle: generateSprite(seed + 999, category, false)
             },
             autoPlay: true 
         };
@@ -90,18 +149,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const keyword = keywordInput.value.trim();
         if (!keyword) return;
 
-        previewStatus.innerText = "GENERATING ICONIC ASSETS...";
+        previewStatus.innerText = "ANALYZING CONTEXT...";
         previewStatus.style.color = "#ffbd2e";
         
         setTimeout(() => {
             currentConfig = generateGameConfig(keyword);
-            statTheme.innerText = currentConfig.theme.accentColor;
+            statTheme.innerText = currentConfig.category;
             statTheme.style.color = currentConfig.theme.accentColor;
             statHash.innerText = `0x${currentConfig.seed.toString(16).toUpperCase()}`;
             
             engineInstance = new LoadiEngine('game-container', currentConfig);
             
-            // Interaction Listener to disable Auto-pilot
             const disableAuto = () => {
                 if (engineInstance.config.autoPlay) {
                     engineInstance.config.autoPlay = false;
@@ -113,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.addEventListener('keydown', (e) => { if(e.code === 'Space') disableAuto(); }, {once: true});
             document.getElementById('game-container').addEventListener('mousedown', disableAuto, {once: true});
 
-            previewStatus.innerText = "SYSTEM ACTIVE - AUTO PILOT";
+            previewStatus.innerText = `SYSTEM ACTIVE - ${currentConfig.gameType} MODE`;
             previewStatus.style.color = "#27c93f";
             controls.classList.remove('hidden');
 
@@ -125,17 +183,11 @@ document.addEventListener('DOMContentLoaded', () => {
         createZipPackage(currentConfig);
     });
 
-    // --- ZIP Packaging ---
-
     async function createZipPackage(config) {
         const zip = new JSZip();
-        
-        // 1. Get Engine Code
         const response = await fetch('loadi-engine.js');
         const engineCode = await response.text();
 
-        // 2. Create Config File
-        // Remove autoPlay for the production version
         const prodConfig = JSON.parse(JSON.stringify(config));
         prodConfig.autoPlay = false;
         
@@ -145,27 +197,23 @@ document.addEventListener('DOMContentLoaded', () => {
             window.loadiConfig = ${JSON.stringify(prodConfig, null, 4)};
         `;
 
-        // 3. Create HTML Wrapper
         const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Loadi Game: ${config.keyword}</title>
     <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #111; }
-        #game-target { width: 100%; max-width: 600px; height: 200px; border: 2px solid ${config.theme.accentColor}; }
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: ${config.theme.background.includes('gradient') ? '#000' : config.theme.background}; overflow: hidden; }
+        #game-target { width: 100vw; height: 100vh; background: ${config.theme.background}; }
     </style>
 </head>
 <body>
     <div id="game-target"></div>
-    
     <script>${configCode}</script>
     <script>${engineCode}</script>
-    <script>
-        // Initialize Game
-        new LoadiEngine('game-target', window.loadiConfig);
-    </script>
+    <script>new LoadiEngine('game-target', window.loadiConfig);</script>
 </body>
 </html>
         `;
@@ -174,12 +222,10 @@ document.addEventListener('DOMContentLoaded', () => {
         zip.file("loadi-engine.js", engineCode);
         zip.file("config.js", configCode);
 
-        // Generate Blob
         const content = await zip.generateAsync({ type: "blob" });
         saveAs(content, `loadi-${config.keyword.toLowerCase()}.zip`);
     }
 
-    // Allow Enter key
     keywordInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') btnGenerate.click();
     });
