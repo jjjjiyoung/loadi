@@ -331,6 +331,10 @@ class LoadiEngine {
         // Draw Theme Particles
         this.drawBackgroundParticles(ctx, w, h, s);
 
+        const pColor = theme.playerColor || '#fff';
+        const oColor = theme.obstacleColor || '#f00';
+        const aColor = theme.accentColor || '#0ff';
+
         // Draw Trail
         if (this.trail) {
             this.trail.forEach((pos, i) => {
@@ -347,7 +351,7 @@ class LoadiEngine {
         }
 
         if (this.config.gameType !== 'FLAPPY') {
-            ctx.strokeStyle = theme.accentColor || '#0ff';
+            ctx.strokeStyle = aColor;
             ctx.lineWidth = Math.max(1, 2 * s);
             ctx.beginPath();
             ctx.moveTo(0, this.groundY);
@@ -355,7 +359,6 @@ class LoadiEngine {
             ctx.stroke();
         }
 
-        const pColor = theme.playerColor || '#fff';
         ctx.fillStyle = pColor;
         if (this.config.sprites && this.config.sprites.player) {
             this.drawSprite(this.config.sprites.player, this.player.x, this.player.y, this.player.w, this.player.h, pColor, 0);
@@ -363,7 +366,6 @@ class LoadiEngine {
             ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
         }
 
-        const oColor = theme.obstacleColor || '#f00';
         this.obstacles.forEach(obs => {
             const rotation = (obs.type === 'ZIGZAG' || obs.type === 'NORMAL') ? this.frame / 20 : 0;
             if (this.config.sprites && this.config.sprites.obstacle && obs.type !== 'PIPE') {
@@ -374,7 +376,6 @@ class LoadiEngine {
             }
         });
 
-        const aColor = theme.accentColor || '#0ff';
         ctx.fillStyle = aColor;
         ctx.font = `${Math.floor(12 * s)}px Courier New`;
         ctx.textAlign = 'left';
