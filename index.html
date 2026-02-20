@@ -1,33 +1,67 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Loadi - Retro Pixel Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loadi Gen - AI Game Generator</title>
     <link rel="stylesheet" href="style.css">
+    <!-- JSZip for client-side zipping -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
-    <div class="retro-container">
+    <div class="app-background"></div>
+    
+    <div class="main-interface">
         <header>
-            <h1 class="pixel-text">LOADI SYSTEM v1.0</h1>
-            <div class="status-bar">STATUS: LOADING...</div>
+            <div class="logo">LOADI <span class="badge">GEN</span></div>
+            <p class="subtitle">Procedural Loading Screen Game Generator</p>
         </header>
-        
-        <div class="game-viewport">
-            <canvas id="gameCanvas"></canvas>
-            <div id="start-msg" class="pixel-text">PRESS SPACE TO START</div>
-        </div>
 
-        <div class="loading-wrapper">
-            <div class="pixel-label">NOW LOADING</div>
-            <div class="progress-border">
-                <div id="progress-fill"></div>
+        <section class="input-section">
+            <div class="input-group">
+                <input type="text" id="keyword-input" placeholder="Enter keyword (e.g., Mars, Cyber, Cat)..." autocomplete="off">
+                <button id="btn-generate" class="btn-primary">
+                    <span class="icon">✨</span> GENERATE
+                </button>
             </div>
-        </div>
-        
-        <footer>
-            <p class="pixel-text">© 2026 LOADI. ALL RIGHTS RESERVED.</p>
-        </footer>
+        </section>
+
+        <section class="preview-section">
+            <div class="monitor-frame">
+                <div class="monitor-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                    <span id="preview-status" class="status-text">WAITING FOR INPUT</span>
+                </div>
+                <div id="game-container" class="game-viewport">
+                    <!-- Game Canvas will be injected here -->
+                    <div class="placeholder-text">Enter a keyword to generate a unique game engine.</div>
+                </div>
+            </div>
+            
+            <div class="controls hidden" id="action-controls">
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="label">THEME</span>
+                        <span class="value" id="stat-theme">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">SPRITE HASH</span>
+                        <span class="value" id="stat-hash">-</span>
+                    </div>
+                </div>
+                <button id="btn-download" class="btn-secondary">
+                    <span class="icon">📦</span> DOWNLOAD ZIP
+                </button>
+            </div>
+        </section>
     </div>
-    <script src="main.js"></script>
+
+    <!-- Core Engine Template (Hidden, used for packing) -->
+    <script src="loadi-engine.js"></script>
+    <!-- Generator Logic -->
+    <script src="generator.js"></script>
 </body>
 </html>
