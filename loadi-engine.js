@@ -118,25 +118,33 @@ class LoadiEngine {
         this.obstacles = [];
         this.isGameOver = false;
         
+        // Physics randomization based on seed
+        const seed = this.config.seed || 0;
         const s = this.scale || 1;
         const type = this.config ? this.config.gameType : 'RUNNER';
+
+        // Variable gravity/jump based on seed
+        this.gravity = (0.5 + (seed % 3) * 0.1) * s;
+        this.jumpPower = (9 + (seed % 5) * 0.5) * s;
 
         if (type === 'RUNNER') {
             this.player.x = 50 * s;
             this.player.y = this.groundY - this.player.h;
-            this.speed = 4.5;
+            this.speed = 4.5 + (seed % 2);
         } else if (type === 'DODGE') {
             this.player.x = (this.canvas.width / 2) - (this.player.w / 2);
             this.player.y = this.groundY - this.player.h;
-            this.speed = 3;
+            this.speed = 3 + (seed % 2);
         } else if (type === 'FLAPPY') {
             this.player.x = 50 * s;
             this.player.y = this.canvas.height / 2;
-            this.speed = 3.5;
+            this.speed = 3.5 + (seed % 2);
+            this.gravity = (0.3 + (seed % 2) * 0.1) * s;
         }
         
         this.player.dy = 0;
         this.player.grounded = false;
+        this.trail = [];
     }
 
     handleInput() {
@@ -145,12 +153,11 @@ class LoadiEngine {
             return;
         }
         
-        const s = this.scale;
         if (this.config.gameType === 'RUNNER' && this.player.grounded) {
-            this.player.dy = -10 * s;
+            this.player.dy = -this.jumpPower;
             this.player.grounded = false;
         } else if (this.config.gameType === 'FLAPPY') {
-            this.player.dy = -6 * s;
+            this.player.dy = -this.jumpPower * 0.65;
         }
     }
 
@@ -158,11 +165,15 @@ class LoadiEngine {
         if (!this.isPlaying || this.isGameOver) return;
 
         this.difficulty = 1 + (this.frame / 2000);
-        const s = this.scale;
+        const s = this.scale || 1;
         const currentSpeed = this.speed * this.difficulty * s;
-        const spawnRate = Math.max(20, Math.floor(60 / this.difficulty));
+        const spawnRate = Math.max(15, Math.floor(60 / this.difficulty));
 
         if (this.config.autoPlay) this.autoPlayBot(currentSpeed);
+
+        // Update trail
+        this.trail.unshift({ x: this.player.x, y: this.player.y });
+        if (this.trail.length > 5) this.trail.pop();
 
         if (this.config.gameType === 'RUNNER') this.updateRunner(currentSpeed, spawnRate);
         else if (this.config.gameType === 'DODGE') this.updateDodge(currentSpeed, spawnRate);
@@ -173,8 +184,8 @@ class LoadiEngine {
     }
 
     updateRunner(speed, spawnRate) {
-        const s = this.scale;
-        this.player.dy += 0.6 * s;
+        const s = this.scale || 1;
+        this.player.dy += this.gravity;
         this.player.y += this.player.dy;
 
         if (this.player.y > this.groundY - this.player.h) {
@@ -184,11 +195,12 @@ class LoadiEngine {
         }
 
         if (this.frame % spawnRate === 0) {
-            const type = Math.random() > 0.8 ? 'TALL' : 'NORMAL';
+            const randType = Math.random();
+            const type = randType > 0.8 ? 'TALL' : (randType > 0.6 ? 'DOUBLE' : 'NORMAL');
             this.obstacles.push({
                 x: this.canvas.width,
                 y: this.groundY - (type === 'TALL' ? 40 : 20) * s,
-                w: 20 * s,
+                w: (type === 'DOUBLE' ? 40 : 20) * s,
                 h: (type === 'TALL' ? 40 : 20) * s,
                 type: type
             });
@@ -311,6 +323,21 @@ class LoadiEngine {
         } else ctx.fillStyle = bg;
         
         ctx.fillRect(0, 0, w, h);
+
+        // Draw Trail
+        if (this.trail) {
+            this.trail.forEach((pos, i) => {
+                const alpha = (5 - i) / 10;
+                ctx.globalAlpha = alpha;
+                if (this.config.sprites && this.config.sprites.player) {
+                    this.drawSprite(this.config.sprites.player, pos.x, pos.y, this.player.w, this.player.h, pColor, 0);
+                } else {
+                    ctx.fillStyle = pColor;
+                    ctx.fillRect(pos.x, pos.y, this.player.w, this.player.h);
+                }
+            });
+            ctx.globalAlpha = 1;
+        }
 
         if (this.config.gameType !== 'FLAPPY') {
             ctx.strokeStyle = theme.accentColor || '#0ff';

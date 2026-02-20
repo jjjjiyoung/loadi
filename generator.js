@@ -30,15 +30,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function analyzeKeyword(keyword) {
         const kw = keyword.toLowerCase();
         
-        const flightTerms = ['bird', 'fly', 'wing', 'sky', 'cloud', 'plane', 'bee', 'dragon', 'angel', 'butterfly', '새', '비행', '날개', '하늘', '구름'];
-        const spaceTerms = ['space', 'mars', 'star', 'moon', 'rocket', 'alien', 'galaxy', 'meteor', 'ufo', 'planet', 'cosmic', '우주', '화성', '별', '달', '로켓', '외계인'];
-        const waterTerms = ['fish', 'sea', 'ocean', 'water', 'shark', 'whale', 'swim', 'bubble', 'dive', '물고기', '바다', '물', '상어', '수영'];
+        const themes = {
+            AIR: ['bird', 'fly', 'wing', 'sky', 'cloud', 'plane', 'bee', 'dragon', 'angel', 'butterfly', '새', '비행', '날개', '하늘', '구름'],
+            SPACE: ['space', 'mars', 'star', 'moon', 'rocket', 'alien', 'galaxy', 'meteor', 'ufo', 'planet', 'cosmic', '우주', '화성', '별', '달', '로켓', '외계인'],
+            WATER: ['fish', 'sea', 'ocean', 'water', 'shark', 'whale', 'swim', 'bubble', 'dive', '물고기', '바다', '물', '상어', '수영'],
+            NATURE: ['forest', 'tree', 'grass', 'leaf', 'flower', 'bug', 'jungle', 'animal', '숲', '나무', '풀', '꽃', '동물'],
+            CYBER: ['cyber', 'neon', 'matrix', 'glitch', 'robot', 'tech', 'digital', 'code', 'future', '네온', '로봇', '기술', '디지털'],
+            FIRE: ['fire', 'flame', 'lava', 'volcano', 'hot', 'burn', 'sun', 'dragon', '불', '화염', '용암', '화산', '태양'],
+            URBAN: ['city', 'street', 'car', 'building', 'traffic', 'urban', 'road', '도시', '도로', '빌딩', '자동차']
+        };
 
-        if (flightTerms.some(t => kw.includes(t))) return 'AIR';
-        if (spaceTerms.some(t => kw.includes(t))) return 'SPACE';
-        if (waterTerms.some(t => kw.includes(t))) return 'WATER';
+        for (const [theme, words] of Object.entries(themes)) {
+            if (words.some(t => kw.includes(t))) return theme;
+        }
         
-        const categories = ['LAND', 'AIR', 'SPACE', 'WATER'];
+        const categories = Object.keys(themes);
         return categories[stringToSeed(kw) % categories.length];
     }
 
@@ -48,34 +54,50 @@ document.addEventListener('DOMContentLoaded', () => {
         switch(category) {
             case 'AIR':
                 return {
-                    background: 'linear-gradient(to bottom, #1e3c72, #2a5298)',
-                    playerColor: '#fff',
-                    obstacleColor: '#f1c40f',
-                    accentColor: '#00f2ff',
+                    background: 'linear-gradient(to bottom, #4facfe, #00f2fe)',
+                    playerColor: '#ffffff', obstacleColor: '#f1c40f', accentColor: '#ffffff',
                     gameType: 'FLAPPY'
                 };
             case 'SPACE':
                 return {
                     background: '#050505',
-                    playerColor: '#00f2ff',
-                    obstacleColor: '#e74c3c',
-                    accentColor: '#9b59b6',
+                    playerColor: '#00f2ff', obstacleColor: '#ff0055', accentColor: '#9b59b6',
                     gameType: 'DODGE'
                 };
             case 'WATER':
                 return {
-                    background: '#002b36',
-                    playerColor: '#268bd2',
-                    obstacleColor: '#2aa198',
-                    accentColor: '#859900',
+                    background: 'linear-gradient(to bottom, #001f3f, #0074D9)',
+                    playerColor: '#7FDBFF', obstacleColor: '#39CCCC', accentColor: '#ffffff',
                     gameType: 'FLAPPY'
                 };
-            default: // LAND
+            case 'NATURE':
                 return {
-                    background: `hsl(${hue}, 20%, 10%)`,
-                    playerColor: `hsl(${(hue + 40) % 360}, 80%, 60%)`,
-                    obstacleColor: `hsl(${(hue + 180) % 360}, 70%, 50%)`,
-                    accentColor: `hsl(${(hue + 40) % 360}, 100%, 70%)`,
+                    background: 'linear-gradient(to bottom, #11998e, #38ef7d)',
+                    playerColor: '#ffffff', obstacleColor: '#795548', accentColor: '#ffffff',
+                    gameType: 'RUNNER'
+                };
+            case 'CYBER':
+                return {
+                    background: '#000000',
+                    playerColor: '#00ff00', obstacleColor: '#ff00ff', accentColor: '#00ffff',
+                    gameType: 'RUNNER'
+                };
+            case 'FIRE':
+                return {
+                    background: 'linear-gradient(to top, #870000, #190a05)',
+                    playerColor: '#ffcc00', obstacleColor: '#ff4400', accentColor: '#ffffff',
+                    gameType: 'DODGE'
+                };
+            case 'URBAN':
+                return {
+                    background: '#2c3e50',
+                    playerColor: '#ecf0f1', obstacleColor: '#e74c3c', accentColor: '#f1c40f',
+                    gameType: 'RUNNER'
+                };
+            default:
+                return {
+                    background: '#111111',
+                    playerColor: '#ffffff', obstacleColor: '#ff0000', accentColor: '#00ffff',
                     gameType: 'RUNNER'
                 };
         }
@@ -84,30 +106,28 @@ document.addEventListener('DOMContentLoaded', () => {
     function generateSprite(seed, category, isPlayer = true) {
         const grid = new Array(64).fill(0);
         const rand = (s) => seededRandom(s);
-
+        
+        // Define DNA rules based on theme
         for (let y = 0; y < 8; y++) {
             for (let x = 0; x < 4; x++) {
                 let prob = 0.5;
+                
                 if (isPlayer) {
-                    if (category === 'SPACE') {
-                        prob = (x < 2 && y > 1 && y < 7) ? 0.2 : 0.8;
-                        if (y === 1 && x === 1) prob = 0.1;
-                    } else if (category === 'AIR' || category === 'WATER') {
-                        prob = (y > 2 && y < 6) ? 0.2 : 0.7;
-                        if (x > 1) prob -= 0.2;
-                    }
+                    if (category === 'SPACE') prob = (y < 2 || y > 6) ? 0.8 : 0.2; // Sleek rocket
+                    else if (category === 'AIR') prob = (x < 1) ? 0.9 : 0.3; // Bird wings
+                    else if (category === 'CYBER') prob = (x + y) % 2 === 0 ? 0.2 : 0.7; // Glitchy block
+                    else if (category === 'FIRE') prob = (y < 4) ? 0.1 : 0.6; // Flame tip
                 } else {
-                    if (category === 'SPACE') prob = 0.4;
-                    else prob = 0.3;
+                    if (category === 'SPACE') prob = (x > 1 && y > 1 && y < 6) ? 0.2 : 0.8; // Meteor chunk
+                    else if (category === 'URBAN') prob = (x < 1) ? 0.1 : 0.4; // Building-ish
+                    else if (category === 'NATURE') prob = (y > 4) ? 0.1 : 0.7; // Rock/Bush
                 }
-                const val = rand(seed + y * 13 + x) > prob ? 1 : 0;
-                grid[y * 8 + x] = val;
-                grid[y * 8 + (7 - x)] = val;
+
+                if (rand(seed + y * 13 + x) > prob) {
+                    grid[y * 8 + x] = 1;
+                    grid[y * 8 + (7 - x)] = 1;
+                }
             }
-        }
-        if (isPlayer) {
-            grid[3 * 8 + 3] = 1; grid[3 * 8 + 4] = 1;
-            grid[4 * 8 + 3] = 1; grid[4 * 8 + 4] = 1;
         }
         return grid;
     }
