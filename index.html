@@ -1,14 +1,33 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+    <meta charset="UTF-8">
+    <title>Loadi - Retro Pixel Game</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+    <div class="retro-container">
+        <header>
+            <h1 class="pixel-text">LOADI SYSTEM v1.0</h1>
+            <div class="status-bar">STATUS: LOADING...</div>
+        </header>
+        
+        <div class="game-viewport">
+            <canvas id="gameCanvas"></canvas>
+            <div id="start-msg" class="pixel-text">PRESS SPACE TO START</div>
+        </div>
+
+        <div class="loading-wrapper">
+            <div class="pixel-label">NOW LOADING</div>
+            <div class="progress-border">
+                <div id="progress-fill"></div>
+            </div>
+        </div>
+        
+        <footer>
+            <p class="pixel-text">© 2026 LOADI. ALL RIGHTS RESERVED.</p>
+        </footer>
+    </div>
+    <script src="main.js"></script>
 </body>
 </html>
