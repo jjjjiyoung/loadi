@@ -107,25 +107,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const grid = new Array(64).fill(0);
         const rand = (s) => seededRandom(s);
         
-        // Define DNA rules based on theme
         for (let y = 0; y < 8; y++) {
             for (let x = 0; x < 4; x++) {
                 let prob = 0.5;
                 
                 if (isPlayer) {
-                    if (category === 'SPACE') prob = (y < 2 || y > 6) ? 0.8 : 0.2; // Sleek rocket
-                    else if (category === 'AIR') prob = (x < 1) ? 0.9 : 0.3; // Bird wings
-                    else if (category === 'CYBER') prob = (x + y) % 2 === 0 ? 0.2 : 0.7; // Glitchy block
-                    else if (category === 'FIRE') prob = (y < 4) ? 0.1 : 0.6; // Flame tip
+                    switch(category) {
+                        case 'SPACE': // Pointy Rocket
+                            prob = (y < 2 && x === 3) ? 0.9 : (y > 1 && y < 7 && x > 1) ? 0.2 : 0.8;
+                            break;
+                        case 'AIR': // Wide Winged Bird
+                            prob = (y > 2 && y < 6) ? 0.2 : (x < 2) ? 0.9 : 0.7;
+                            break;
+                        case 'WATER': // Fish with tail
+                            prob = (y > 2 && y < 6 && x > 0) ? 0.2 : (x === 0 && y > 3 && y < 5) ? 0.3 : 0.9;
+                            break;
+                        case 'CYBER': // Geometric Robot
+                            prob = (x > 1 && y > 1 && y < 7) ? 0.2 : 0.8;
+                            if ((x + y) % 3 === 0) prob -= 0.3;
+                            break;
+                        case 'FIRE': // Flickering Flame
+                            prob = (y < 3) ? 0.9 : (y > 2 && x > 1) ? 0.2 : 0.7;
+                            break;
+                        case 'NATURE': // Organic Animal
+                            prob = (y > 1 && y < 7 && x > 0) ? 0.3 : 0.8;
+                            break;
+                        case 'URBAN': // Boxy Vehicle
+                            prob = (y > 2 && y < 6) ? 0.2 : 0.9;
+                            break;
+                    }
                 } else {
-                    if (category === 'SPACE') prob = (x > 1 && y > 1 && y < 6) ? 0.2 : 0.8; // Meteor chunk
-                    else if (category === 'URBAN') prob = (x < 1) ? 0.1 : 0.4; // Building-ish
-                    else if (category === 'NATURE') prob = (y > 4) ? 0.1 : 0.7; // Rock/Bush
+                    // Specialized Obstacles per Theme
+                    switch(category) {
+                        case 'SPACE': // Jagged Meteor
+                            prob = (x > 0 && y > 0 && x < 4 && y < 7) ? 0.3 : 0.9;
+                            break;
+                        case 'NATURE': // Round Rock / Bush
+                            prob = (y > 3 && x > 0) ? 0.2 : 0.8;
+                            break;
+                        case 'URBAN': // Rectangular Building
+                            prob = (x > 1) ? 0.1 : 0.9;
+                            break;
+                        case 'WATER': // Spike Mine
+                            prob = (x === 3 || y === 4) ? 0.2 : 0.8;
+                            break;
+                        default:
+                            prob = 0.4;
+                    }
                 }
 
                 if (rand(seed + y * 13 + x) > prob) {
                     grid[y * 8 + x] = 1;
-                    grid[y * 8 + (7 - x)] = 1;
+                    grid[y * 8 + (7 - x)] = 1; // Symmetrical
                 }
             }
         }

@@ -328,6 +328,9 @@ class LoadiEngine {
         
         ctx.fillRect(0, 0, w, h);
 
+        // Draw Theme Particles
+        this.drawBackgroundParticles(ctx, w, h, s);
+
         // Draw Trail
         if (this.trail) {
             this.trail.forEach((pos, i) => {
@@ -389,6 +392,41 @@ class LoadiEngine {
             ctx.fillText("Click to Restart", w/2, h/2 + 30 * s);
             ctx.textAlign = 'left';
         }
+    }
+
+    drawBackgroundParticles(ctx, w, h, s) {
+        if (!this.config || !this.config.category) return;
+        const category = this.config.category;
+        const seed = this.config.seed || 0;
+        
+        ctx.fillStyle = this.config.theme.accentColor || '#fff';
+        ctx.globalAlpha = 0.3;
+
+        for (let i = 0; i < 15; i++) {
+            const px = (Math.sin(seed + i * 100 + this.frame * 0.05) * 0.5 + 0.5) * w;
+            const py = (Math.cos(seed + i * 200 + this.frame * 0.02) * 0.5 + 0.5) * h;
+            
+            if (category === 'SPACE') { // Twinkling Stars
+                const size = (Math.sin(this.frame * 0.1 + i) * 1 + 2) * s;
+                ctx.fillRect(px, py, size, size);
+            } else if (category === 'WATER') { // Floating Bubbles
+                const ry = (py + this.frame * 0.5) % h;
+                ctx.beginPath();
+                ctx.arc(px, ry, 3 * s, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (category === 'AIR') { // Moving Clouds
+                const rx = (px - this.frame * 0.3) % w;
+                ctx.fillRect(rx < 0 ? rx + w : rx, py, 20 * s, 10 * s);
+            } else if (category === 'URBAN') { // Falling Rain
+                const ry = (py + this.frame * 2) % h;
+                ctx.fillRect(px, ry, 1 * s, 10 * s);
+            } else if (category === 'CYBER') { // Matrix Code
+                const ry = (py + this.frame * 1.5) % h;
+                ctx.font = `${10 * s}px monospace`;
+                ctx.fillText(String.fromCharCode(33 + (this.frame + i) % 94), px, ry);
+            }
+        }
+        ctx.globalAlpha = 1;
     }
 
     drawSprite(bitmap, x, y, w, h, color, rotation = 0) {
