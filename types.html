@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Types - Loadi Gen</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .type-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+        .type-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+        }
+        .type-preview {
+            width: 100%;
+            height: 120px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .type-info h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+        .type-info p {
+            margin: 0.5rem 0 0;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+        .back-home {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            color: var(--text);
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .back-home:hover { color: var(--accent); }
+        
+        /* Custom scrollbar */
+        .types-grid::-webkit-scrollbar { width: 4px; }
+        .types-grid::-webkit-scrollbar-track { background: transparent; }
+        .types-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="app-background"></div>
+    
+    <a href="index.html" class="back-home">← BACK TO SYSTEM</a>
+
+    <div class="main-interface">
+        <header>
+            <div class="logo">GAME <span class="badge">TYPES</span></div>
+            <p class="subtitle">Explore all 6 operational game modes</p>
+        </header>
+
+        <div class="types-grid">
+            <!-- Runner -->
+            <div class="type-card">
+                <div id="prev-runner" class="type-preview"></div>
+                <div class="type-info">
+                    <h3>RUNNER</h3>
+                    <p>Classic side-scrolling action. Jump over obstacles and survive the increasing speed.</p>
+                </div>
+            </div>
+
+            <!-- Dodge -->
+            <div class="type-card">
+                <div id="prev-dodge" class="type-preview"></div>
+                <div class="type-info">
+                    <h3>DODGE</h3>
+                    <p>Vertical falling obstacles. Move left and right to avoid cosmic debris.</p>
+                </div>
+            </div>
+
+            <!-- Flappy -->
+            <div class="type-card">
+                <div id="prev-flappy" class="type-preview"></div>
+                <div class="type-info">
+                    <h3>FLAPPY</h3>
+                    <p>Counter gravity by flapping. Navigate through tight gaps in the environment.</p>
+                </div>
+            </div>
+
+            <!-- Maze -->
+            <div class="type-card">
+                <div id="prev-maze" class="type-preview"></div>
+                <div class="type-info">
+                    <h3>MAZE</h3>
+                    <p>Retro grid exploration. Collect dots and avoid chasing entities.</p>
+                </div>
+            </div>
+
+            <!-- Shooter -->
+            <div class="type-card">
+                <div id="prev-shooter" class="type-preview"></div>
+                <div class="type-info">
+                    <h3>SHOOTER</h3>
+                    <p>Combat engagement. Move horizontally and eliminate incoming threats.</p>
+                </div>
+            </div>
+
+            <!-- Jump -->
+            <div class="type-card">
+                <div id="prev-jump" class="type-preview"></div>
+                <div class="type-info">
+                    <h3>JUMP</h3>
+                    <p>Infinite verticality. Bounce on platforms to reach record heights.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="loadi-engine.js"></script>
+    <script>
+        const defaultConfig = {
+            theme: { background: '#000', playerColor: '#fff', obstacleColor: '#f00', accentColor: '#0ff' },
+            sprites: { player: null, obstacle: null },
+            autoPlay: true
+        };
+
+        const modes = [
+            { id: 'prev-runner', type: 'RUNNER', cat: 'LAND' },
+            { id: 'prev-dodge', type: 'DODGE', cat: 'SPACE' },
+            { id: 'prev-flappy', type: 'FLAPPY', cat: 'AIR' },
+            { id: 'prev-maze', type: 'MAZE', cat: 'MAZE' },
+            { id: 'prev-shooter', type: 'SHOOTER', cat: 'SHOOTER' },
+            { id: 'prev-jump', type: 'JUMP', cat: 'JUMP' }
+        ];
+
+        window.addEventListener('load', () => {
+            modes.forEach(mode => {
+                const config = JSON.parse(JSON.stringify(defaultConfig));
+                config.gameType = mode.type;
+                config.category = mode.cat;
+                new LoadiEngine(mode.id, config);
+            });
+        });
+    </script>
+</body>
+</html>

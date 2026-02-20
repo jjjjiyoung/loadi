@@ -42,6 +42,9 @@ class LoadiEngine {
             x: 50, y: 0, w: 20, h: 20, dx: 0, dy: 0, jumpPower: 10, grounded: false
         };
         this.obstacles = [];
+        this.dots = [];
+        this.bullets = [];
+        this.platforms = [];
         this.frame = 0;
         this.score = 0;
         this.speed = 4;
@@ -116,6 +119,9 @@ class LoadiEngine {
         this.score = 0;
         this.difficulty = 1;
         this.obstacles = [];
+        this.dots = [];
+        this.bullets = [];
+        this.platforms = [];
         this.isGameOver = false;
         
         // Physics randomization based on seed
