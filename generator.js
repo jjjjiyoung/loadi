@@ -66,8 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             case 'WATER':
                 return {
-                    background: 'linear-gradient(to bottom, #001f3f, #0074D9)',
-                    playerColor: '#7FDBFF', obstacleColor: '#39CCCC', accentColor: '#ffffff',
+                    background: 'linear-gradient(to bottom, #001f3f, #0074d9)',
+                    playerColor: '#7fdbff', obstacleColor: '#39cccc', accentColor: '#ffffff',
                     gameType: 'FLAPPY'
                 };
             case 'NATURE':

@@ -139,7 +139,8 @@ class LoadiEngine {
             this.player.x = 50 * s;
             this.player.y = this.canvas.height / 2;
             this.speed = 3.5 + (seed % 2);
-            this.gravity = (0.3 + (seed % 2) * 0.1) * s;
+            this.gravity = (0.25 + (seed % 2) * 0.05) * s;
+            this.jumpPower = (6 + (seed % 3) * 0.5) * s; // Lighter jump for flappy
         }
         
         this.player.dy = 0;
@@ -246,16 +247,19 @@ class LoadiEngine {
     }
 
     updateFlappy(speed, spawnRate) {
-        const s = this.scale;
-        this.player.dy += 0.3 * s;
+        const s = this.scale || 1;
+        this.player.dy += this.gravity || 0.4 * s;
         this.player.y += this.player.dy;
 
-        if (this.player.y < 0 || this.player.y > this.canvas.height - this.player.h) this.onHit();
+        // More forgiving bounds check
+        if (this.player.y < -this.player.h * 2 || this.player.y > this.canvas.height + this.player.h) {
+            this.onHit();
+        }
 
-        if (this.frame % (spawnRate * 2) === 0) {
-            const gap = (70 - Math.min(30, this.difficulty * 5)) * s;
-            const gapY = Math.random() * (this.canvas.height - gap - 40 * s) + 20 * s;
-            const pipeW = 30 * s;
+        if (this.frame % (spawnRate * 2.5) === 0) {
+            const gap = (80 - Math.min(30, this.difficulty * 4)) * s;
+            const gapY = Math.random() * (this.canvas.height - gap - 60 * s) + 30 * s;
+            const pipeW = 35 * s;
             this.obstacles.push({ x: this.canvas.width, y: 0, w: pipeW, h: gapY, type: 'PIPE' });
             this.obstacles.push({ x: this.canvas.width, y: gapY + gap, w: pipeW, h: this.canvas.height - (gapY + gap), type: 'PIPE' });
         }
