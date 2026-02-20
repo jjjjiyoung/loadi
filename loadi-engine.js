@@ -154,12 +154,8 @@ class LoadiEngine {
             this.jumpPower = (6 + (seed % 3) * 0.5) * s;
         } else if (type === 'MAZE') {
             this.generateMaze();
-            this.player.x = 40 * s;
-            this.player.y = 40 * s;
-            while (this.walls.some(w => this.checkCollision(this.player, w))) {
-                this.player.x += 10 * s;
-                this.player.y += 10 * s;
-            }
+            this.player.x = cellW_maze * 1.5;
+            this.player.y = cellH_maze * 1.5;
             this.speed = 2 * s;
             for(let i=0; i<20; i++) this.spawnDot();
         } else if (type === 'PUZZLE') {
@@ -203,14 +199,20 @@ class LoadiEngine {
     }
 
     generateMaze() {
+        const s = this.scale || 1;
         const cols = 15, rows = 10;
-        const cellW = this.canvas.width / cols, cellH = this.canvas.height / rows;
+        window.cellW_maze = this.canvas.width / cols;
+        window.cellH_maze = this.canvas.height / rows;
+
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 const isEdge = r === 0 || r === rows - 1 || c === 0 || c === cols - 1;
+                // Periodic pillar walls to ensure connectivity
+                const isPillar = (r % 2 === 0 && c % 2 === 0) && (Math.random() > 0.4);
                 const isSpawnSafe = r < 3 && c < 3;
-                if (isEdge || (Math.random() > 0.7 && !isSpawnSafe)) {
-                    this.walls.push({ x: c * cellW, y: r * cellH, w: cellW, h: cellH });
+                
+                if (isEdge || (isPillar && !isSpawnSafe)) {
+                    this.walls.push({ x: c * window.cellW_maze, y: r * window.cellH_maze, w: window.cellW_maze, h: window.cellH_maze });
                 }
             }
         }
@@ -269,10 +271,7 @@ class LoadiEngine {
                         this.selectedGem.type = clicked.type;
                         clicked.type = temp;
                         if (this.checkPuzzleMatches().length > 0) { this.score += 50; }
-                        else { // Swap back if no match
-                            clicked.type = this.selectedGem.type;
-                            this.selectedGem.type = temp;
-                        }
+                        else { clicked.type = this.selectedGem.type; this.selectedGem.type = temp; }
                     }
                     this.selectedGem = null;
                 }
@@ -362,6 +361,7 @@ class LoadiEngine {
         this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
         this.player.y = Math.max(0, Math.min(this.canvas.height - this.player.h, this.player.y));
         for (let i = this.dots.length - 1; i >= 0; i--) { if (this.checkCollision(this.player, this.dots[i])) { this.dots.splice(i, 1); this.score += 10; this.spawnDot(); } }
+        
         if (this.frame % (spawnRate * 2) === 0 && this.obstacles.length < 4) {
             let gx, gy, valid = false;
             while(!valid) {
@@ -374,8 +374,9 @@ class LoadiEngine {
         this.obstacles.forEach(obs => {
             const ox = obs.x, oy = obs.y, dx = this.player.x - obs.x, dy = this.player.y - obs.y, dist = Math.sqrt(dx*dx + dy*dy);
             if (dist > 0) {
-                obs.x += (dx / dist) * speed * 0.5; if (this.walls.some(w => this.checkCollision(obs, w))) obs.x = ox;
-                obs.y += (dy / dist) * speed * 0.5; if (this.walls.some(w => this.checkCollision(obs, w))) obs.y = oy;
+                const moveX = (dx / dist) * speed * 0.5, moveY = (dy / dist) * speed * 0.5;
+                obs.x += moveX; if (this.walls.some(w => this.checkCollision(obs, w))) obs.x = ox;
+                obs.y += moveY; if (this.walls.some(w => this.checkCollision(obs, w))) obs.y = oy;
             }
             if (this.checkCollision(this.player, obs)) this.onHit();
         });
