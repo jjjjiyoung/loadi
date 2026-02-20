@@ -39,10 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
             FIRE: ['fire', 'flame', 'lava', 'volcano', 'hot', 'burn', 'sun', 'dragon', '불', '화염', '용암', '화산', '태양'],
             URBAN: ['city', 'street', 'car', 'building', 'traffic', 'urban', 'road', '도시', '도로', '빌딩', '자동차'],
             MAZE: ['pacman', 'maze', 'ghost', 'dot', 'eat', 'cookie', 'pixel', 'retro', '팩맨', '미로', '유령', '복고'],
-            SHOOTER: ['shoot', 'gun', 'war', 'battle', 'laser', 'attack', 'tank', 'fighter', '총', '전쟁', '레이저', '슈팅'],
+            SHOOTER: ['shoot', 'gun', 'war', 'battle', 'laser', 'attack', 'tank', 'fighter', '총', '전쟁', '레이저', '슈팅', '전투'],
             JUMP: ['jump', 'bounce', 'high', 'top', 'climb', 'spring', 'doodle', '점프', '구름', '높이', '등산'],
             PUZZLE: ['puzzle', 'match', 'gem', 'candy', 'brain', 'logic', '퍼즐', '매치', '보석', '사탕'],
-            STACK: ['stack', 'tetris', 'block', 'tower', 'build', 'brick', '스택', '테트리스', '블록', '타워', '건설']
+            STACK: ['stack', 'tetris', 'block', 'tower', 'build', 'brick', '스택', '테트리스', '블록', '타워', '건설'],
+            GRAVITY: ['gravity', 'flip', 'reverse', 'invert', 'magnet', 'updown', '중력', '반전', '자석']
         };
 
         for (const [theme, words] of Object.entries(themes)) {
@@ -57,6 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const hue = Math.floor(seededRandom(seed) * 360);
         
         switch(category) {
+            case 'GRAVITY':
+                return {
+                    background: '#0f0c29',
+                    playerColor: '#302b63', obstacleColor: '#24243e', accentColor: '#00f2ff',
+                    gameType: 'GRAVITY'
+                };
             case 'PUZZLE':
                 return {
                     background: '#2c3e50',
@@ -187,10 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         case 'STACK': // Perfect Block
                             prob = (x > 0 && y > 0 && y < 7) ? 0.1 : 0.9;
                             break;
+                        case 'GRAVITY': // Diamond shape
+                            prob = (Math.abs(x-3.5) + Math.abs(y-3.5) < 3) ? 0.2 : 0.8;
+                            break;
                     }
                 } else {
                     // Specialized Obstacles per Theme
                     switch(category) {
+                        case 'GRAVITY': // Spike Triangle
+                            prob = (y > x * 2) ? 0.2 : 0.9;
+                            break;
                         case 'PUZZLE': // Alternative Gem
                             prob = (x > 1 && y > 1 && x < 4 && y < 6) ? 0.2 : 0.8;
                             break;

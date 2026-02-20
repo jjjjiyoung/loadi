@@ -45,6 +45,7 @@ class LoadiEngine {
         this.dots = [];
         this.bullets = [];
         this.platforms = [];
+        this.walls = [];
         this.frame = 0;
         this.score = 0;
         this.speed = 4;
@@ -122,6 +123,7 @@ class LoadiEngine {
         this.dots = [];
         this.bullets = [];
         this.platforms = [];
+        this.walls = [];
         this.isGameOver = false;
         
         // Physics randomization based on seed
@@ -147,21 +149,18 @@ class LoadiEngine {
             this.speed = 3.5 + (seed % 2);
             this.gravity = (0.25 + (seed % 2) * 0.05) * s;
             this.jumpPower = (6 + (seed % 3) * 0.5) * s;
-                } else if (type === 'MAZE') {
-                    this.walls = [];
-                    this.generateMaze();
-                    // Find safe spawn
-                    this.player.x = 40 * s;
-                    this.player.y = 40 * s;
-                    while (this.walls.some(w => this.checkCollision(this.player, w))) {
-                        this.player.x += 10 * s;
-                        this.player.y += 10 * s;
-                    }
-                    this.speed = 2 * s;
-                    this.dots = [];
-                    for(let i=0; i<20; i++) this.spawnDot();
-                }
-         else if (type === 'PUZZLE') {
+        } else if (type === 'MAZE') {
+            this.generateMaze();
+            // Find safe spawn
+            this.player.x = 40 * s;
+            this.player.y = 40 * s;
+            while (this.walls.some(w => this.checkCollision(this.player, w))) {
+                this.player.x += 10 * s;
+                this.player.y += 10 * s;
+            }
+            this.speed = 2 * s;
+            for(let i=0; i<20; i++) this.spawnDot();
+        } else if (type === 'PUZZLE') {
             this.puzzleGrid = [];
             const cols = 6, rows = 4;
             const size = 30 * s;
@@ -176,10 +175,19 @@ class LoadiEngine {
                     });
                 }
             }
-            this.selectedGem = null;
         } else if (type === 'STACK') {
             this.stackBlocks = [{ x: (this.canvas.width - 60*s)/2, y: this.canvas.height - 20*s, w: 60*s, h: 20*s }];
             this.currentStackBlock = { x: 0, y: this.canvas.height - 40*s, w: 60*s, h: 20*s, dir: 1 };
+            this.speed = 3 * s;
+        } else if (type === 'GRAVITY') {
+            this.player.x = 50 * s;
+            this.player.y = this.groundY - this.player.h;
+            this.player.gravityDir = 1; 
+            this.speed = 4 * s;
+            this.topY = 30 * s;
+        } else if (type === 'SHOOTER') {
+            this.player.x = this.canvas.width / 2 - 10 * s;
+            this.player.y = this.canvas.height - 40 * s;
             this.speed = 3 * s;
         }
         
@@ -198,9 +206,7 @@ class LoadiEngine {
 
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                // Outer walls
                 const isEdge = r === 0 || r === rows - 1 || c === 0 || c === cols - 1;
-                // Random inner walls, but keep top-left clear
                 const isSpawnSafe = r < 3 && c < 3;
                 if (isEdge || (Math.random() > 0.7 && !isSpawnSafe)) {
                     this.walls.push({ x: c * cellW, y: r * cellH, w: cellW, h: cellH });
@@ -238,11 +244,11 @@ class LoadiEngine {
         } else if (this.config.gameType === 'STACK') {
             const last = this.stackBlocks[this.stackBlocks.length - 1];
             const overlap = Math.min(this.currentStackBlock.x + this.currentStackBlock.w, last.x + last.w) - Math.max(this.currentStackBlock.x, last.x);
-            
             if (overlap > 0) {
-                this.stackBlocks.push({ ...this.currentStackBlock });
+                this.stackBlocks.push({ ...this.currentStackBlock, x: Math.max(this.currentStackBlock.x, last.x), w: overlap });
                 this.score += 100;
                 this.currentStackBlock.y -= this.currentStackBlock.h;
+                this.currentStackBlock.w = overlap;
                 if (this.stackBlocks.length > 5) {
                     this.stackBlocks.shift();
                     this.stackBlocks.forEach(b => b.y += b.h);
@@ -252,9 +258,10 @@ class LoadiEngine {
                 this.gameOver();
             }
         } else if (this.config.gameType === 'PUZZLE') {
-            // Randomize grid on click
             this.puzzleGrid.forEach(g => g.type = Math.floor(Math.random() * 4));
             this.score += 10;
+        } else if (this.config.gameType === 'GRAVITY') {
+            this.player.gravityDir *= -1;
         }
     }
 
@@ -268,8 +275,7 @@ class LoadiEngine {
 
         if (this.config.autoPlay) this.autoPlayBot(currentSpeed);
 
-        // Update trail
-        if (this.config.gameType !== 'MAZE') {
+        if (this.config.gameType !== 'MAZE' && this.config.gameType !== 'PUZZLE' && this.config.gameType !== 'STACK') {
             this.trail.unshift({ x: this.player.x, y: this.player.y });
             if (this.trail.length > 5) this.trail.pop();
         }
@@ -282,82 +288,41 @@ class LoadiEngine {
         else if (this.config.gameType === 'JUMP') this.updateJump(currentSpeed, spawnRate);
         else if (this.config.gameType === 'PUZZLE') this.updatePuzzle();
         else if (this.config.gameType === 'STACK') this.updateStack(currentSpeed);
+        else if (this.config.gameType === 'GRAVITY') this.updateGravity(currentSpeed, spawnRate);
 
         this.frame++;
-        if (this.config.gameType !== 'MAZE' && this.config.gameType !== 'PUZZLE' && this.config.gameType !== 'STACK') this.score = Math.floor(this.frame / 10);
-    }
-
-    updatePuzzle() {
-        // Auto-match for preview/autoplay
-        if (this.frame % 60 === 0) {
-            const matches = this.checkPuzzleMatches();
-            if (matches.length > 0) {
-                matches.forEach(gem => gem.type = Math.floor(Math.random() * 4));
-                this.score += matches.length * 10;
-            }
-        }
-    }
-
-    checkPuzzleMatches() {
-        const matches = new Set();
-        // Simple horizontal check
-        for(let r=0; r<4; r++) {
-            for(let c=0; c<4; c++) {
-                const g1 = this.puzzleGrid.find(g => g.r === r && g.c === c);
-                const g2 = this.puzzleGrid.find(g => g.r === r && g.c === c+1);
-                const g3 = this.puzzleGrid.find(g => g.r === r && g.c === c+2);
-                if (g1 && g2 && g3 && g1.type === g2.type && g2.type === g3.type) {
-                    matches.add(g1); matches.add(g2); matches.add(g3);
-                }
-            }
-        }
-        return Array.from(matches);
-    }
-
-    updateStack(speed) {
-        this.currentStackBlock.x += speed * this.currentStackBlock.dir;
-        if (this.currentStackBlock.x < 0 || this.currentStackBlock.x + this.currentStackBlock.w > this.canvas.width) {
-            this.currentStackBlock.dir *= -1;
+        if (!['MAZE', 'PUZZLE', 'STACK', 'JUMP'].includes(this.config.gameType)) {
+            this.score = Math.floor(this.frame / 10);
         }
     }
 
     updateShooter(speed, spawnRate) {
         const s = this.scale || 1;
-        // Move
         if (this.keys['ArrowLeft']) this.player.x -= 4 * s;
         if (this.keys['ArrowRight']) this.player.x += 4 * s;
         this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
 
-        // Auto Fire
         if (this.frame % 15 === 0) {
             this.bullets.push({ x: this.player.x + this.player.w/2 - 2*s, y: this.player.y, w: 4*s, h: 10*s });
         }
 
-        // Bullets
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             this.bullets[i].y -= 7 * s;
             if (this.bullets[i].y < 0) this.bullets.splice(i, 1);
         }
 
-        // Spawn Enemies
         if (this.frame % spawnRate === 0) {
             this.obstacles.push({
                 x: Math.random() * (this.canvas.width - 20 * s),
-                y: -30 * s,
-                w: 25 * s,
-                h: 25 * s,
-                hp: 1
+                y: -30 * s, w: 25 * s, h: 25 * s, hp: 1
             });
         }
 
-        // Enemies & Collision
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             let obs = this.obstacles[i];
             let destroyed = false;
             obs.y += speed * 0.8;
-            
             if (this.checkCollision(this.player, obs)) this.onHit();
-
             for (let b = this.bullets.length - 1; b >= 0; b--) {
                 if (this.checkCollision(this.bullets[b], obs)) {
                     obs.hp--;
@@ -376,20 +341,14 @@ class LoadiEngine {
 
     updateJump(speed, spawnRate) {
         const s = this.scale || 1;
-        
-        // Horizontal Move
         if (this.keys['ArrowLeft']) this.player.x -= 5 * s;
         if (this.keys['ArrowRight']) this.player.x += 5 * s;
-        
-        // Screen Wrap
         if (this.player.x < -this.player.w) this.player.x = this.canvas.width;
         if (this.player.x > this.canvas.width) this.player.x = -this.player.w;
 
-        // Physics
-        this.player.dy += 0.4 * s; // Gravity
+        this.player.dy += 0.4 * s;
         this.player.y += this.player.dy;
 
-        // Platform Collision (Bounce)
         if (this.player.dy > 0) {
             this.platforms.forEach(p => {
                 if (this.player.x + this.player.w > p.x && this.player.x < p.x + p.w &&
@@ -399,7 +358,6 @@ class LoadiEngine {
             });
         }
 
-        // Camera Scroll (Move platforms down instead of player up)
         if (this.player.y < this.canvas.height / 2) {
             const diff = this.canvas.height / 2 - this.player.y;
             this.player.y = this.canvas.height / 2;
@@ -407,45 +365,33 @@ class LoadiEngine {
             this.score += Math.floor(diff);
         }
 
-        // Spawn Platforms
         const topPlat = this.platforms.reduce((min, p) => p.y < min ? p.y : min, this.canvas.height);
         if (topPlat > 50 * s) {
             this.platforms.push({
                 x: Math.random() * (this.canvas.width - 40 * s),
                 y: topPlat - (Math.random() * 40 * s + 60 * s),
-                w: 40 * s,
-                h: 8 * s
+                w: 40 * s, h: 8 * s
             });
         }
-
-        // Remove old platforms
         this.platforms = this.platforms.filter(p => p.y < this.canvas.height);
-
-        // Game Over
         if (this.player.y > this.canvas.height) this.onHit();
     }
 
     updateMaze(speed, spawnRate) {
         const s = this.scale || 1;
-        const oldX = this.player.x;
-        const oldY = this.player.y;
-        
+        const oldX = this.player.x, oldY = this.player.y;
         if (this.keys['ArrowUp']) this.player.y -= speed;
         if (this.keys['ArrowDown']) this.player.y += speed;
         if (this.keys['ArrowLeft']) this.player.x -= speed;
         if (this.keys['ArrowRight']) this.player.x += speed;
 
-        // Wall Collision for Player
         if (this.walls.some(w => this.checkCollision(this.player, w))) {
-            this.player.x = oldX;
-            this.player.y = oldY;
+            this.player.x = oldX; this.player.y = oldY;
         }
 
-        // Clamp to screen
         this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
         this.player.y = Math.max(0, Math.min(this.canvas.height - this.player.h, this.player.y));
 
-        // Collect Dots
         for (let i = this.dots.length - 1; i >= 0; i--) {
             if (this.checkCollision(this.player, this.dots[i])) {
                 this.dots.splice(i, 1);
@@ -454,71 +400,60 @@ class LoadiEngine {
             }
         }
 
-        // Spawn Enemies (Ghosts) inside maze paths
         if (this.frame % (spawnRate * 2) === 0 && this.obstacles.length < 4) {
             let gx, gy, valid = false;
             while(!valid) {
                 gx = Math.random() * (this.canvas.width - 20 * s);
                 gy = Math.random() * (this.canvas.height - 20 * s);
                 const temp = { x: gx, y: gy, w: 20*s, h: 20*s };
-                valid = !this.walls.some(w => this.checkCollision(temp, w)) && 
-                        Math.hypot(this.player.x - gx, this.player.y - gy) > 100 * s;
+                valid = !this.walls.some(w => this.checkCollision(temp, w)) && Math.hypot(this.player.x - gx, this.player.y - gy) > 100 * s;
             }
-            this.obstacles.push({ x: gx, y: gy, w: 20*s, h: 20*s, type: 'GHOST', vx: speed * 0.5, vy: 0 });
+            this.obstacles.push({ x: gx, y: gy, w: 20*s, h: 20*s, type: 'GHOST' });
         }
 
-        // Move Ghosts with Wall Avoidance
         this.obstacles.forEach(obs => {
-            const ox = obs.x;
-            const oy = obs.y;
-            
-            // Simple logic: try chasing, if hit wall, pick random direction
-            const dx = this.player.x - obs.x;
-            const dy = this.player.y - obs.y;
+            const ox = obs.x, oy = obs.y;
+            const dx = this.player.x - obs.x, dy = this.player.y - obs.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
-            
             if (dist > 0) {
-                const moveX = (dx / dist) * speed * 0.5;
-                const moveY = (dy / dist) * speed * 0.5;
-                
-                obs.x += moveX;
-                if (this.walls.some(w => this.checkCollision(obs, w))) {
-                    obs.x = ox; // Hit wall x
-                }
-                
-                obs.y += moveY;
-                if (this.walls.some(w => this.checkCollision(obs, w))) {
-                    obs.y = oy; // Hit wall y
-                }
+                obs.x += (dx / dist) * speed * 0.5;
+                if (this.walls.some(w => this.checkCollision(obs, w))) obs.x = ox;
+                obs.y += (dy / dist) * speed * 0.5;
+                if (this.walls.some(w => this.checkCollision(obs, w))) obs.y = oy;
             }
-
             if (this.checkCollision(this.player, obs)) this.onHit();
         });
+    }
+
+    updateGravity(speed, spawnRate) {
+        const s = this.scale || 1;
+        this.player.dy += 0.6 * s * this.player.gravityDir;
+        this.player.y += this.player.dy;
+        if (this.player.y > this.groundY - this.player.h) { this.player.y = this.groundY - this.player.h; this.player.dy = 0; }
+        if (this.player.y < this.topY) { this.player.y = this.topY; this.player.dy = 0; }
+
+        if (this.frame % spawnRate === 0) {
+            const onCeiling = Math.random() > 0.5;
+            this.obstacles.push({ x: this.canvas.width, y: onCeiling ? this.topY : this.groundY - 20 * s, w: 20 * s, h: 20 * s, onCeiling });
+        }
+        for (let i = this.obstacles.length - 1; i >= 0; i--) {
+            let obs = this.obstacles[i];
+            obs.x -= speed;
+            if (this.checkCollision(this.player, obs)) this.onHit();
+            if (obs.x + obs.w < 0) this.obstacles.splice(i, 1);
+        }
     }
 
     updateRunner(speed, spawnRate) {
         const s = this.scale || 1;
         this.player.dy += this.gravity;
         this.player.y += this.player.dy;
-
-        if (this.player.y > this.groundY - this.player.h) {
-            this.player.y = this.groundY - this.player.h;
-            this.player.dy = 0;
-            this.player.grounded = true;
-        }
-
+        if (this.player.y > this.groundY - this.player.h) { this.player.y = this.groundY - this.player.h; this.player.dy = 0; this.player.grounded = true; }
         if (this.frame % spawnRate === 0) {
-            const randType = Math.random();
-            const type = randType > 0.8 ? 'TALL' : (randType > 0.6 ? 'DOUBLE' : 'NORMAL');
-            this.obstacles.push({
-                x: this.canvas.width,
-                y: this.groundY - (type === 'TALL' ? 40 : 20) * s,
-                w: (type === 'DOUBLE' ? 40 : 20) * s,
-                h: (type === 'TALL' ? 40 : 20) * s,
-                type: type
-            });
+            const rt = Math.random();
+            const type = rt > 0.8 ? 'TALL' : (rt > 0.6 ? 'DOUBLE' : 'NORMAL');
+            this.obstacles.push({ x: this.canvas.width, y: this.groundY - (type === 'TALL' ? 40 : 20) * s, w: (type === 'DOUBLE' ? 40 : 20) * s, h: (type === 'TALL' ? 40 : 20) * s, type });
         }
-
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             let obs = this.obstacles[i];
             obs.x -= speed;
@@ -528,31 +463,17 @@ class LoadiEngine {
     }
 
     updateDodge(speed, spawnRate) {
-        const s = this.scale;
-        const moveSpeed = 5 * s;
-        if (this.keys['ArrowLeft']) this.player.x -= moveSpeed;
-        if (this.keys['ArrowRight']) this.player.x += moveSpeed;
-        
+        const s = this.scale || 1;
+        if (this.keys['ArrowLeft']) this.player.x -= 5 * s;
+        if (this.keys['ArrowRight']) this.player.x += 5 * s;
         this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
-
         if (this.frame % spawnRate === 0) {
-            const type = Math.random() > 0.7 ? 'ZIGZAG' : 'FALL';
-            this.obstacles.push({
-                x: Math.random() * (this.canvas.width - 20 * s),
-                y: -20 * s,
-                w: 20 * s,
-                h: 20 * s,
-                type: type,
-                seed: Math.random() * 10
-            });
+            this.obstacles.push({ x: Math.random() * (this.canvas.width - 20 * s), y: -20 * s, w: 20 * s, h: 20 * s, type: Math.random() > 0.7 ? 'ZIGZAG' : 'FALL', seed: Math.random() * 10 });
         }
-
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             let obs = this.obstacles[i];
             obs.y += speed;
-            if (obs.type === 'ZIGZAG') {
-                obs.x += Math.sin(this.frame / 10 + obs.seed) * 3 * s;
-            }
+            if (obs.type === 'ZIGZAG') obs.x += Math.sin(this.frame / 10 + obs.seed) * 3 * s;
             if (this.checkCollision(this.player, obs)) this.onHit();
             if (obs.y > this.canvas.height) this.obstacles.splice(i, 1);
         }
@@ -562,26 +483,44 @@ class LoadiEngine {
         const s = this.scale || 1;
         this.player.dy += this.gravity || 0.4 * s;
         this.player.y += this.player.dy;
-
-        // More forgiving bounds check
-        if (this.player.y < -this.player.h * 2 || this.player.y > this.canvas.height + this.player.h) {
-            this.onHit();
-        }
-
-        if (this.frame % (spawnRate * 2.5) === 0) {
+        if (this.player.y < -this.player.h * 2 || this.player.y > this.canvas.height + this.player.h) this.onHit();
+        if (this.frame % Math.floor(spawnRate * 2.5) === 0) {
             const gap = (80 - Math.min(30, this.difficulty * 4)) * s;
             const gapY = Math.random() * (this.canvas.height - gap - 60 * s) + 30 * s;
-            const pipeW = 35 * s;
-            this.obstacles.push({ x: this.canvas.width, y: 0, w: pipeW, h: gapY, type: 'PIPE' });
-            this.obstacles.push({ x: this.canvas.width, y: gapY + gap, w: pipeW, h: this.canvas.height - (gapY + gap), type: 'PIPE' });
+            this.obstacles.push({ x: this.canvas.width, y: 0, w: 35 * s, h: gapY, type: 'PIPE' });
+            this.obstacles.push({ x: this.canvas.width, y: gapY + gap, w: 35 * s, h: this.canvas.height - (gapY + gap), type: 'PIPE' });
         }
-
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             let obs = this.obstacles[i];
             obs.x -= speed;
             if (this.checkCollision(this.player, obs)) this.onHit();
             if (obs.x + obs.w < 0) this.obstacles.splice(i, 1);
         }
+    }
+
+    updatePuzzle() {
+        if (this.frame % 60 === 0) {
+            const matches = this.checkPuzzleMatches();
+            if (matches.length > 0) { matches.forEach(gem => gem.type = Math.floor(Math.random() * 4)); this.score += matches.length * 10; }
+        }
+    }
+
+    checkPuzzleMatches() {
+        const matches = new Set();
+        for(let r=0; r<4; r++) {
+            for(let c=0; c<4; c++) {
+                const g1 = this.puzzleGrid.find(g => g.r === r && g.c === c);
+                const g2 = this.puzzleGrid.find(g => g.r === r && g.c === c+1);
+                const g3 = this.puzzleGrid.find(g => g.r === r && g.c === c+2);
+                if (g1 && g2 && g3 && g1.type === g2.type && g2.type === g3.type) { matches.add(g1); matches.add(g2); matches.add(g3); }
+            }
+        }
+        return Array.from(matches);
+    }
+
+    updateStack(speed) {
+        this.currentStackBlock.x += speed * this.currentStackBlock.dir;
+        if (this.currentStackBlock.x < 0 || this.currentStackBlock.x + this.currentStackBlock.w > this.canvas.width) this.currentStackBlock.dir *= -1;
     }
 
     checkCollision(a, b) {
@@ -594,67 +533,37 @@ class LoadiEngine {
     }
 
     autoPlayBot(speed) {
-        const s = this.scale;
+        const s = this.scale || 1;
         if (this.config.gameType === 'RUNNER') {
             const lookahead = 120 * s;
             const incoming = this.obstacles.find(o => o.x > this.player.x && o.x < this.player.x + lookahead);
-            if (incoming && this.player.grounded) {
-                const dist = incoming.x - (this.player.x + this.player.w);
-                if (dist < speed * 12) this.handleInput();
-            }
+            if (incoming && this.player.grounded) { if (incoming.x - (this.player.x + this.player.w) < speed * 12) this.handleInput(); }
         } else if (this.config.gameType === 'DODGE') {
             const incoming = this.obstacles.find(o => o.y + o.h < this.player.y && o.y + o.h > this.player.y - 120 * s);
-            if (incoming) {
-                if (incoming.x + incoming.w/2 > this.player.x + this.player.w/2) this.player.x -= 5 * s;
-                else this.player.x += 5 * s;
-            }
+            if (incoming) { if (incoming.x + incoming.w/2 > this.player.x + this.player.w/2) this.player.x -= 5 * s; else this.player.x += 5 * s; }
         } else if (this.config.gameType === 'FLAPPY') {
             const incoming = this.obstacles.find(o => o.x + o.w > this.player.x);
-            if (incoming) {
-                const gapY = incoming.y === 0 ? incoming.h + 35 * s : incoming.y - 35 * s;
-                if (this.player.y + this.player.h/2 > gapY) this.handleInput();
-            }
+            if (incoming) { const gapY = incoming.y === 0 ? incoming.h + 35 * s : incoming.y - 35 * s; if (this.player.y + this.player.h/2 > gapY) this.handleInput(); }
         } else if (this.config.gameType === 'MAZE') {
-            // Target nearest dot
             if (this.dots && this.dots.length > 0) {
-                const nearest = this.dots.reduce((prev, curr) => {
-                    const d1 = Math.hypot(this.player.x - prev.x, this.player.y - prev.y);
-                    const d2 = Math.hypot(this.player.x - curr.x, this.player.y - curr.y);
-                    return d1 < d2 ? prev : curr;
-                });
-                
-                if (nearest.x > this.player.x) this.player.x += speed * 0.5;
-                else this.player.x -= speed * 0.5;
-                if (nearest.y > this.player.y) this.player.y += speed * 0.5;
-                else this.player.y -= speed * 0.5;
-            }
-
-            // Avoid nearest ghost
-            const ghost = this.obstacles.find(o => Math.hypot(this.player.x - o.x, this.player.y - o.y) < 50 * s);
-            if (ghost) {
-                if (ghost.x > this.player.x) this.player.x -= speed * 0.8;
-                else this.player.x += speed * 0.8;
-                if (ghost.y > this.player.y) this.player.y -= speed * 0.8;
-                else this.player.y += speed * 0.8;
+                const nearest = this.dots.reduce((prev, curr) => Math.hypot(this.player.x - prev.x, this.player.y - prev.y) < Math.hypot(this.player.x - curr.x, this.player.y - curr.y) ? prev : curr);
+                if (nearest.x > this.player.x) this.player.x += speed * 0.5; else this.player.x -= speed * 0.5;
+                if (nearest.y > this.player.y) this.player.y += speed * 0.5; else this.player.y -= speed * 0.5;
             }
         } else if (this.config.gameType === 'SHOOTER') {
-            // Track nearest enemy x
             const target = this.obstacles[0];
-            if (target) {
-                if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += speed;
-                else this.player.x -= speed;
-            }
+            if (target) { if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += speed; else this.player.x -= speed; }
         } else if (this.config.gameType === 'JUMP') {
-            // Find platform above
             const target = this.platforms.find(p => p.y < this.player.y && p.y > this.player.y - 150 * s);
-            if (target) {
-                if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += 4 * s;
-                else this.player.x -= 4 * s;
-            }
+            if (target) { if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += 4 * s; else this.player.x -= 4 * s; }
         } else if (this.config.gameType === 'STACK') {
             const last = this.stackBlocks[this.stackBlocks.length - 1];
-            if (Math.abs(this.currentStackBlock.x - last.x) < 5 * s) {
-                this.handleInput();
+            if (Math.abs(this.currentStackBlock.x - last.x) < 5 * s) this.handleInput();
+        } else if (this.config.gameType === 'GRAVITY') {
+            const incoming = this.obstacles.find(o => o.x > this.player.x && o.x < this.player.x + 150 * s);
+            if (incoming) {
+                const onSameSide = (this.player.gravityDir === 1 && !incoming.onCeiling) || (this.player.gravityDir === -1 && incoming.onCeiling);
+                if (onSameSide && Math.abs(incoming.x - this.player.x) < 100 * s) this.handleInput();
             }
         }
     }
@@ -662,202 +571,74 @@ class LoadiEngine {
     draw() {
         const ctx = this.ctx;
         if (!ctx || !this.config || !this.config.theme) return;
-
-        const w = this.canvas.width;
-        const h = this.canvas.height;
-        const s = this.scale || 1;
-        const theme = this.config.theme;
-
-        // Background
+        const w = this.canvas.width, h = this.canvas.height, s = this.scale || 1, theme = this.config.theme;
         const bg = theme.background || '#000';
         if (bg.includes('gradient')) {
              const grd = ctx.createLinearGradient(0, 0, 0, h);
              const colors = bg.match(/#[a-fA-F0-9]{6}/g);
-             if (colors && colors.length >= 2) {
-                 grd.addColorStop(0, colors[0]);
-                 grd.addColorStop(1, colors[1]);
-                 ctx.fillStyle = grd;
-             } else ctx.fillStyle = '#000';
+             if (colors && colors.length >= 2) { grd.addColorStop(0, colors[0]); grd.addColorStop(1, colors[1]); ctx.fillStyle = grd; } else ctx.fillStyle = '#000';
         } else ctx.fillStyle = bg;
-        
         ctx.fillRect(0, 0, w, h);
 
-        // Draw MAZE Walls
-        if (this.config.gameType === 'MAZE' && this.walls) {
-            ctx.fillStyle = theme.accentColor || '#00f';
-            this.walls.forEach(wall => ctx.fillRect(wall.x, wall.y, wall.w, wall.h));
-        }
-
-        // Draw MAZE Dots
-        if (this.config.gameType === 'MAZE' && this.dots) {
-            ctx.fillStyle = theme.accentColor || '#ff0';
-            this.dots.forEach(dot => {
-                ctx.beginPath();
-                ctx.arc(dot.x + dot.w/2, dot.y + dot.h/2, dot.w/2, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        // Draw SHOOTER Bullets
-        if (this.config.gameType === 'SHOOTER' && this.bullets) {
-            ctx.fillStyle = '#ff0';
-            this.bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-        }
-
-        // Draw JUMP Platforms
-        if (this.config.gameType === 'JUMP' && this.platforms) {
-            ctx.fillStyle = theme.obstacleColor;
-            this.platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
-        }
-
-        // Draw PUZZLE Gems
+        if (this.config.gameType === 'MAZE' && this.walls) { ctx.fillStyle = theme.accentColor || '#00f'; this.walls.forEach(wall => ctx.fillRect(wall.x, wall.y, wall.w, wall.h)); }
+        if (this.config.gameType === 'MAZE' && this.dots) { ctx.fillStyle = theme.accentColor || '#ff0'; this.dots.forEach(dot => { ctx.beginPath(); ctx.arc(dot.x + dot.w/2, dot.y + dot.h/2, dot.w/2, 0, Math.PI * 2); ctx.fill(); }); }
+        if (this.config.gameType === 'SHOOTER' && this.bullets) { ctx.fillStyle = '#ff0'; this.bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h)); }
+        if (this.config.gameType === 'JUMP' && this.platforms) { ctx.fillStyle = theme.obstacleColor; this.platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h)); }
         if (this.config.gameType === 'PUZZLE' && this.puzzleGrid) {
             const gemColors = [theme.playerColor, theme.obstacleColor, theme.accentColor, '#fff'];
-            this.puzzleGrid.forEach(gem => {
-                ctx.fillStyle = gemColors[gem.type] || '#fff';
-                ctx.fillRect(gem.x + 2, gem.y + 2, gem.w - 4, gem.h - 4);
-            });
+            this.puzzleGrid.forEach(gem => { ctx.fillStyle = gemColors[gem.type] || '#fff'; ctx.fillRect(gem.x + 2, gem.y + 2, gem.w - 4, gem.h - 4); });
         }
+        if (this.config.gameType === 'STACK') { ctx.fillStyle = theme.playerColor; this.stackBlocks.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h)); ctx.fillStyle = theme.accentColor; ctx.fillRect(this.currentStackBlock.x, this.currentStackBlock.y, this.currentStackBlock.w, this.currentStackBlock.h); }
 
-        // Draw STACK Blocks
-        if (this.config.gameType === 'STACK') {
-            ctx.fillStyle = theme.playerColor;
-            this.stackBlocks.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-            ctx.fillStyle = theme.accentColor;
-            ctx.fillRect(this.currentStackBlock.x, this.currentStackBlock.y, this.currentStackBlock.w, this.currentStackBlock.h);
-        }
-
-        // Draw Theme Particles
         this.drawBackgroundParticles(ctx, w, h, s);
-
-        const pColor = theme.playerColor || '#fff';
-        const oColor = theme.obstacleColor || '#f00';
-        const aColor = theme.accentColor || '#0ff';
-
-        // Draw Trail
+        const pColor = theme.playerColor || '#fff', oColor = theme.obstacleColor || '#f00', aColor = theme.accentColor || '#0ff';
         if (this.trail) {
-            this.trail.forEach((pos, i) => {
-                const alpha = (5 - i) / 10;
-                ctx.globalAlpha = alpha;
-                if (this.config.sprites && this.config.sprites.player) {
-                    this.drawSprite(this.config.sprites.player, pos.x, pos.y, this.player.w, this.player.h, pColor, 0);
-                } else {
-                    ctx.fillStyle = pColor;
-                    ctx.fillRect(pos.x, pos.y, this.player.w, this.player.h);
-                }
-            });
+            this.trail.forEach((pos, i) => { const alpha = (5 - i) / 10; ctx.globalAlpha = alpha; if (this.config.sprites && this.config.sprites.player) this.drawSprite(this.config.sprites.player, pos.x, pos.y, this.player.w, this.player.h, pColor, 0); else { ctx.fillStyle = pColor; ctx.fillRect(pos.x, pos.y, this.player.w, this.player.h); } });
             ctx.globalAlpha = 1;
         }
-
-        if (this.config.gameType !== 'FLAPPY') {
-            ctx.strokeStyle = aColor;
-            ctx.lineWidth = Math.max(1, 2 * s);
-            ctx.beginPath();
-            ctx.moveTo(0, this.groundY);
-            ctx.lineTo(w, this.groundY);
+        if (!['FLAPPY', 'MAZE', 'PUZZLE', 'STACK'].includes(this.config.gameType)) {
+            ctx.strokeStyle = aColor; ctx.lineWidth = Math.max(1, 2 * s); ctx.beginPath(); ctx.moveTo(0, this.groundY); ctx.lineTo(w, this.groundY);
+            if (this.config.gameType === 'GRAVITY') { ctx.moveTo(0, this.topY); ctx.lineTo(w, this.topY); }
             ctx.stroke();
         }
-
         ctx.fillStyle = pColor;
-        if (this.config.sprites && this.config.sprites.player) {
-            this.drawSprite(this.config.sprites.player, this.player.x, this.player.y, this.player.w, this.player.h, pColor, 0);
-        } else {
-            ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
-        }
-
+        if (this.config.sprites && this.config.sprites.player) this.drawSprite(this.config.sprites.player, this.player.x, this.player.y, this.player.w, this.player.h, pColor, 0); else ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
         this.obstacles.forEach(obs => {
             const rotation = (obs.type === 'ZIGZAG' || obs.type === 'NORMAL') ? this.frame / 20 : 0;
-            if (this.config.sprites && this.config.sprites.obstacle && obs.type !== 'PIPE') {
-                this.drawSprite(this.config.sprites.obstacle, obs.x, obs.y, obs.w, obs.h, oColor, rotation);
-            } else {
-                ctx.fillStyle = oColor;
-                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-            }
+            if (this.config.sprites && this.config.sprites.obstacle && obs.type !== 'PIPE') this.drawSprite(this.config.sprites.obstacle, obs.x, obs.y, obs.w, obs.h, oColor, rotation); else { ctx.fillStyle = oColor; ctx.fillRect(obs.x, obs.y, obs.w, obs.h); }
         });
-
-        ctx.fillStyle = aColor;
-        ctx.font = `${Math.floor(12 * s)}px Courier New`;
-        ctx.textAlign = 'left';
-        ctx.fillText(`SCORE: ${this.score}`, 10 * s, 20 * s);
-        ctx.fillText(`DIFF: ${this.difficulty.toFixed(1)}x`, 10 * s, 35 * s);
-        
+        ctx.fillStyle = aColor; ctx.font = `${Math.floor(12 * s)}px Courier New`; ctx.textAlign = 'left';
+        ctx.fillText(`SCORE: ${this.score}`, 10 * s, 20 * s); ctx.fillText(`DIFF: ${this.difficulty.toFixed(1)}x`, 10 * s, 35 * s);
         if (this.isGameOver) {
-            ctx.fillStyle = 'rgba(0,0,0,0.85)';
-            ctx.fillRect(0, 0, w, h);
-            ctx.fillStyle = '#fff';
-            ctx.textAlign = 'center';
-            ctx.font = `${Math.floor(20 * s)}px Courier New`;
-            ctx.fillText("GAME OVER", w/2, h/2);
-            ctx.font = `${Math.floor(10 * s)}px Courier New`;
-            ctx.fillText("Click to Restart", w/2, h/2 + 30 * s);
-            ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = `${Math.floor(20 * s)}px Courier New`;
+            ctx.fillText("GAME OVER", w/2, h/2); ctx.font = `${Math.floor(10 * s)}px Courier New`; ctx.fillText("Click to Restart", w/2, h/2 + 30 * s); ctx.textAlign = 'left';
         }
     }
 
     drawBackgroundParticles(ctx, w, h, s) {
         if (!this.config || !this.config.category) return;
-        const category = this.config.category;
-        const seed = this.config.seed || 0;
-        
-        ctx.fillStyle = this.config.theme.accentColor || '#fff';
-        ctx.globalAlpha = 0.3;
-
+        const category = this.config.category, seed = this.config.seed || 0;
+        ctx.fillStyle = this.config.theme.accentColor || '#fff'; ctx.globalAlpha = 0.3;
         for (let i = 0; i < 15; i++) {
-            const px = (Math.sin(seed + i * 100 + this.frame * 0.05) * 0.5 + 0.5) * w;
-            const py = (Math.cos(seed + i * 200 + this.frame * 0.02) * 0.5 + 0.5) * h;
-            
-            if (category === 'SPACE') { // Twinkling Stars
-                const size = (Math.sin(this.frame * 0.1 + i) * 1 + 2) * s;
-                ctx.fillRect(px, py, size, size);
-            } else if (category === 'WATER') { // Floating Bubbles
-                const ry = (py + this.frame * 0.5) % h;
-                ctx.beginPath();
-                ctx.arc(px, ry, 3 * s, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (category === 'AIR') { // Moving Clouds
-                const rx = (px - this.frame * 0.3) % w;
-                ctx.fillRect(rx < 0 ? rx + w : rx, py, 20 * s, 10 * s);
-            } else if (category === 'URBAN') { // Falling Rain
-                const ry = (py + this.frame * 2) % h;
-                ctx.fillRect(px, ry, 1 * s, 10 * s);
-            } else if (category === 'CYBER') { // Matrix Code
-                const ry = (py + this.frame * 1.5) % h;
-                ctx.font = `${10 * s}px monospace`;
-                ctx.fillText(String.fromCharCode(33 + (this.frame + i) % 94), px, ry);
-            }
+            const px = (Math.sin(seed + i * 100 + this.frame * 0.05) * 0.5 + 0.5) * w, py = (Math.cos(seed + i * 200 + this.frame * 0.02) * 0.5 + 0.5) * h;
+            if (category === 'SPACE') { const size = (Math.sin(this.frame * 0.1 + i) * 1 + 2) * s; ctx.fillRect(px, py, size, size); }
+            else if (category === 'WATER') { const ry = (py + this.frame * 0.5) % h; ctx.beginPath(); ctx.arc(px, ry, 3 * s, 0, Math.PI * 2); ctx.fill(); }
+            else if (category === 'AIR') { const rx = (px - this.frame * 0.3) % w; ctx.fillRect(rx < 0 ? rx + w : rx, py, 20 * s, 10 * s); }
+            else if (category === 'URBAN') { const ry = (py + this.frame * 2) % h; ctx.fillRect(px, ry, 1 * s, 10 * s); }
+            else if (category === 'CYBER') { const ry = (py + this.frame * 1.5) % h; ctx.font = `${10 * s}px monospace`; ctx.fillText(String.fromCharCode(33 + (this.frame + i) % 94), px, ry); }
         }
         ctx.globalAlpha = 1;
     }
 
     drawSprite(bitmap, x, y, w, h, color, rotation = 0) {
         if (!bitmap) return;
-        this.ctx.save();
-        this.ctx.translate(x + w / 2, y + h / 2);
-        this.ctx.rotate(rotation);
-        const cellW = w / 8;
-        const cellH = h / 8;
-        this.ctx.fillStyle = color;
-        for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
-                if (bitmap[r * 8 + c] === 1) {
-                    this.ctx.fillRect(-w/2 + c * cellW, -h/2 + r * cellH, Math.ceil(cellW), Math.ceil(cellH));
-                }
-            }
-        }
+        this.ctx.save(); this.ctx.translate(x + w / 2, y + h / 2); this.ctx.rotate(rotation);
+        const cellW = w / 8, cellH = h / 8; this.ctx.fillStyle = color;
+        for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { if (bitmap[r * 8 + c] === 1) this.ctx.fillRect(-w/2 + c * cellW, -h/2 + r * cellH, Math.ceil(cellW), Math.ceil(cellH)); } }
         this.ctx.restore();
     }
 
-    gameOver() {
-        this.isPlaying = false;
-        this.isGameOver = true;
-        this.draw();
-    }
+    gameOver() { this.isPlaying = false; this.isGameOver = true; this.draw(); }
 
-    loop() {
-        if (this.isPlaying && !this.isGameOver) {
-            this.update();
-            this.draw();
-            this.animationFrameId = requestAnimationFrame(() => this.loop());
-        }
-    }
+    loop() { if (this.isPlaying && !this.isGameOver) { this.update(); this.draw(); this.animationFrameId = requestAnimationFrame(() => this.loop()); } }
 }
