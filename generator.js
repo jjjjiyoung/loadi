@@ -139,50 +139,72 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- UI Interactions ---
 
     btnGenerate.addEventListener('click', async () => {
-        const keyword = keywordInput.value.trim();
+        const keyword = (keywordInput.value || "").trim();
         if (!keyword) return;
 
         // Cleanup previous instance
         if (engineInstance) {
-            engineInstance.destroy();
+            try {
+                engineInstance.destroy();
+            } catch (e) {
+                console.warn("Cleanup warning:", e);
+            }
             engineInstance = null;
         }
 
-        previewStatus.innerText = "INITIALIZING SYSTEM...";
-        previewStatus.style.color = "#ffbd2e";
+        if (previewStatus) {
+            previewStatus.innerText = "INITIALIZING SYSTEM...";
+            previewStatus.style.color = "#ffbd2e";
+        }
         
         try {
             // Give UI a tiny moment to update status
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise(r => setTimeout(r, 100));
             
-            previewStatus.innerText = "MAPPING KEYWORD CONTEXT...";
+            if (previewStatus) previewStatus.innerText = "MAPPING KEYWORD CONTEXT...";
             currentConfig = generateGameConfig(keyword);
             
-            statTheme.innerText = currentConfig.category;
-            statTheme.style.color = currentConfig.theme.accentColor;
-            statHash.innerText = `0x${currentConfig.seed.toString(16).toUpperCase()}`;
+            if (statTheme) {
+                statTheme.innerText = currentConfig.category || "LAND";
+                statTheme.style.color = currentConfig.theme.accentColor;
+            }
+            if (statHash) {
+                statHash.innerText = `0x${(currentConfig.seed || 0).toString(16).toUpperCase()}`;
+            }
             
-            previewStatus.innerText = "SPAWNING ENGINE...";
+            if (previewStatus) previewStatus.innerText = "SPAWNING ENGINE...";
+            
+            // Critical check for container existence
+            const container = document.getElementById('game-container');
+            if (!container) throw new Error("Game container not found");
+
             engineInstance = new LoadiEngine('game-container', currentConfig);
             
             const disableAuto = () => {
                 if (engineInstance && engineInstance.config.autoPlay) {
                     engineInstance.config.autoPlay = false;
-                    previewStatus.innerText = "MANUAL CONTROL ACTIVE";
-                    previewStatus.style.color = "#00f2ff";
+                    if (previewStatus) {
+                        previewStatus.innerText = "MANUAL CONTROL ACTIVE";
+                        previewStatus.style.color = "#00f2ff";
+                    }
                 }
             };
 
+            const gameContainer = document.getElementById('game-container');
             window.addEventListener('keydown', (e) => { if(e.code === 'Space') disableAuto(); }, {once: true});
-            document.getElementById('game-container').addEventListener('mousedown', disableAuto, {once: true});
+            if (gameContainer) gameContainer.addEventListener('mousedown', disableAuto, {once: true});
 
-            previewStatus.innerText = `SYSTEM ACTIVE - ${currentConfig.gameType} MODE`;
-            previewStatus.style.color = "#27c93f";
-            controls.classList.remove('hidden');
+            if (previewStatus) {
+                previewStatus.innerText = `SYSTEM ACTIVE - ${currentConfig.gameType} MODE`;
+                previewStatus.style.color = "#27c93f";
+            }
+            if (controls) controls.classList.remove('hidden');
         } catch (error) {
-            console.error("Generation Error:", error);
-            previewStatus.innerText = "CORE SYSTEM ERROR - RETRYING...";
-            previewStatus.style.color = "#ff5f56";
+            console.error("Loadi Generation Error Details:", error);
+            if (previewStatus) {
+                previewStatus.innerText = "SYSTEM ERROR - SEE CONSOLE";
+                previewStatus.style.color = "#ff5f56";
+            }
         }
     });
 

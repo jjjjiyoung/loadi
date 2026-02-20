@@ -300,15 +300,19 @@ class LoadiEngine {
             ctx.stroke();
         }
 
-        ctx.fillStyle = theme.playerColor;
-        this.drawSprite(this.config.sprites.player, this.player.x, this.player.y, this.player.w, this.player.h, theme.playerColor, 0);
+        ctx.fillStyle = theme.playerColor || '#fff';
+        if (this.config.sprites && this.config.sprites.player) {
+            this.drawSprite(this.config.sprites.player, this.player.x, this.player.y, this.player.w, this.player.h, theme.playerColor, 0);
+        } else {
+            ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
+        }
 
         this.obstacles.forEach(obs => {
             const rotation = (obs.type === 'ZIGZAG' || obs.type === 'NORMAL') ? this.frame / 20 : 0;
-            if (this.config.sprites.obstacle && obs.type !== 'PIPE') {
+            if (this.config.sprites && this.config.sprites.obstacle && obs.type !== 'PIPE') {
                 this.drawSprite(this.config.sprites.obstacle, obs.x, obs.y, obs.w, obs.h, theme.obstacleColor, rotation);
             } else {
-                ctx.fillStyle = theme.obstacleColor;
+                ctx.fillStyle = theme.obstacleColor || '#f00';
                 ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
             }
         });
