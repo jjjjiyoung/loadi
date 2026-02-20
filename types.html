@@ -7,107 +7,139 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .types-container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
-            height: 100vh;
+            padding: 3rem 2rem;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
         .types-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 2rem;
-            overflow-y: auto;
-            padding: 1rem;
-            flex: 1;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 2.5rem;
+            padding: 1rem 0;
         }
         .type-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
             position: relative;
         }
         .type-card:hover {
-            transform: translateY(-10px);
-            background: rgba(255, 255, 255, 0.07);
+            transform: translateY(-12px);
+            background: rgba(255, 255, 255, 0.05);
             border-color: var(--accent);
-            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 242, 255, 0.1);
         }
         .type-preview {
             width: 100%;
-            height: 160px;
+            height: 180px;
             background: #000;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        .type-preview::after {
+            content: "LIVE PREVIEW";
+            position: absolute;
+            top: 10px; right: 10px;
+            font-size: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 95, 86, 0.2);
+            color: #ff5f56;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 95, 86, 0.3);
         }
         .type-content {
-            padding: 1.5rem;
+            padding: 1.8rem;
             display: flex;
             flex-direction: column;
-            gap: 0.8rem;
+            gap: 1rem;
+        }
+        .type-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
         }
         .type-tag {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-family: 'JetBrains Mono', monospace;
             background: var(--accent);
             color: #000;
-            padding: 2px 8px;
-            border-radius: 4px;
-            width: fit-content;
-            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 900;
+            text-transform: uppercase;
         }
+        .difficulty {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+        .diff-dot { color: var(--accent); }
+        .diff-dot.off { color: rgba(255,255,255,0.1); }
+
         .type-content h3 {
             margin: 0;
-            font-size: 1.4rem;
+            font-size: 1.6rem;
+            font-weight: 900;
             letter-spacing: -1px;
+            color: #fff;
         }
         .type-desc {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: var(--text-dim);
-            line-height: 1.5;
+            line-height: 1.6;
+            height: 3.2em;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
-        .type-meta {
+        .type-info-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .info-label { color: var(--accent); font-weight: 700; width: 70px; }
+        .info-value { color: #fff; opacity: 0.9; }
+
+        .back-nav {
+            margin-bottom: 3rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: auto;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.7rem;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .meta-label { color: var(--accent); opacity: 0.7; margin-right: 5px; }
-        
-        .back-nav {
-            margin-bottom: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
         }
         .btn-back {
             color: var(--text);
             text-decoration: none;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            padding: 8px 16px;
+            font-size: 0.85rem;
+            padding: 10px 20px;
+            background: var(--glass);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 12px;
             transition: all 0.3s;
         }
-        .btn-back:hover { background: var(--glass); border-color: var(--accent); color: var(--accent); }
-
-        .types-grid::-webkit-scrollbar { width: 6px; }
-        .types-grid::-webkit-scrollbar-track { background: transparent; }
-        .types-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .types-grid::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+        .btn-back:hover { border-color: var(--accent); color: var(--accent); transform: translateX(-5px); }
 
         @media (max-width: 600px) {
-            .types-container { padding: 1rem; }
-            .types-grid { grid-template-columns: 1fr; }
+            .types-container { padding: 1.5rem; }
+            .types-grid { grid-template-columns: 1fr; gap: 1.5rem; }
         }
     </style>
 </head>
@@ -115,73 +147,77 @@
     <div class="app-background"></div>
     
     <div class="types-container">
-        <div class="back-nav">
-            <a href="index.html" class="btn-back">← SYSTEM_HOME</a>
-            <div class="status-text" style="color: var(--accent)">DIRECTORY_LISTING / ALL_MODES</div>
-        </div>
+        <nav class="back-nav">
+            <a href="index.html" class="btn-back">← RETURN_TO_CORE</a>
+            <div class="status-text" style="font-size: 0.8rem; opacity: 0.6;">SYSTEM_DOCS // ENGINE_SPECIFICATIONS</div>
+        </nav>
 
-        <header style="margin-bottom: 2rem;">
-            <div class="logo" style="font-size: 2.5rem; text-align: left;">OPERATIONAL <span class="badge">MODES</span></div>
-            <p class="subtitle" style="text-align: left;">Available logic engines for procedural deployment</p>
+        <header style="margin-bottom: 3rem;">
+            <div class="logo" style="font-size: 3rem; text-align: left; margin-bottom: 0.5rem;">LOGIC <span class="badge">ENGINES</span></div>
+            <p class="subtitle" style="text-align: left; max-width: 600px;">A comprehensive breakdown of all 9 procedural logic models available for deployment.</p>
         </header>
 
-        <div class="types-grid" id="modes-grid">
-            <!-- Cards will be injected by script for cleaner maintenance -->
-        </div>
+        <div class="types-grid" id="modes-grid"></div>
     </div>
 
     <script src="loadi-engine.js"></script>
     <script>
         const modes = [
             { 
-                type: 'RUNNER', cat: 'LAND', 
-                desc: 'Standard side-scrolling survival. Speed increases with score.',
-                keywords: 'Mars, Desert, Run', input: 'SPACE / CLICK'
+                type: 'RUNNER', cat: 'Land-Based', diff: 2,
+                desc: 'Side-scrolling endurance. Jump over varied terrain and obstacles as speed increases.',
+                keywords: 'Mars, Desert, Run, Road', input: 'SPACE or CLICK to Jump'
             },
             { 
-                type: 'DODGE', cat: 'SPACE', 
-                desc: 'Vertical debris evasion. High-precision movement required.',
-                keywords: 'Star, Meteor, Fall', input: 'ARROWS / TOUCH'
+                type: 'DODGE', cat: 'Space-Based', diff: 4,
+                desc: 'High-speed avoidance. Navigate left and right to dodge falling high-velocity debris.',
+                keywords: 'Star, Meteor, Void, Galaxy', input: 'ARROWS or TOUCH to Move'
             },
             { 
-                type: 'FLAPPY', cat: 'AIR', 
-                desc: 'Anti-gravity navigation through atmospheric gaps.',
-                keywords: 'Bird, Sky, Plane', input: 'SPACE / CLICK'
+                type: 'FLAPPY', cat: 'Air-Based', diff: 3,
+                desc: 'Continuous altitude control. Pulse propulsion to navigate through structural gaps.',
+                keywords: 'Bird, Sky, Cloud, Plane', input: 'SPACE or CLICK to Pulse'
             },
             { 
-                type: 'MAZE', cat: 'MAZE', 
-                desc: 'Grid-based exploration with entity avoidance and collection.',
-                keywords: 'Pacman, Ghost, Dot', input: 'ARROWS / SWIPE'
+                type: 'MAZE', cat: 'Grid-Based', diff: 3,
+                desc: 'Strategic pathfinding. Collect data nodes while evading persistent chasing entities.',
+                keywords: 'Pacman, Maze, Ghost, Lab', input: 'ARROWS or SWIPE to Navigate'
             },
             { 
-                type: 'SHOOTER', cat: 'SHOOTER', 
-                desc: 'Tactical engagement with auto-firing defensive systems.',
-                keywords: 'War, Battle, Gun', input: 'ARROWS / TOUCH'
+                type: 'SHOOTER', cat: 'Combat-Based', diff: 4,
+                desc: 'Defensive engagement. Deploy high-frequency projectiles to eliminate incoming targets.',
+                keywords: 'War, Battle, Gun, Siege', input: 'ARROWS to Move (Auto-Fire)'
             },
             { 
-                type: 'JUMP', cat: 'JUMP', 
-                desc: 'Infinite vertical ascension via reactive platforms.',
-                keywords: 'Cloud, Bounce, High', input: 'ARROWS / TOUCH'
+                type: 'JUMP', cat: 'Platform-Based', diff: 2,
+                desc: 'Vertical propulsion. Bounce between ascending platforms to reach maximum altitude.',
+                keywords: 'Bounce, Cloud, Spring, Peak', input: 'ARROWS or TOUCH to Aim'
             },
             { 
-                type: 'PUZZLE', cat: 'PUZZLE', 
-                desc: 'Match-3 logic sequencer. Swap elements to clear the grid.',
-                keywords: 'Gem, Match, Brain', input: 'MOUSE / TOUCH'
+                type: 'PUZZLE', cat: 'Logic-Based', diff: 1,
+                desc: 'Sequencing and matching. Strategically swap adjacent nodes to form logic chains.',
+                keywords: 'Match, Gem, Brain, Code', input: 'CLICK nodes to Swap'
             },
             { 
-                type: 'STACK', cat: 'STACK', 
-                desc: 'Precision tower construction with dynamic block cutting.',
-                keywords: 'Tetris, Block, Build', input: 'SPACE / CLICK'
+                type: 'STACK', cat: 'Precision-Based', diff: 5,
+                desc: 'Structural construction. Time deployments perfectly to stack layers with zero tolerance.',
+                keywords: 'Tetris, Block, Build, Tower', input: 'SPACE or CLICK to Drop'
             },
             { 
-                type: 'GRAVITY', cat: 'GRAVITY', 
-                desc: 'Bi-polar orientation flipping. Floor and ceiling are both active.',
-                keywords: 'Flip, Magnet, Invert', input: 'SPACE / CLICK'
+                type: 'GRAVITY', cat: 'Flip-Based', diff: 4,
+                desc: 'Bi-polar orientation. Instantaneously flip gravity to alternate between floor and ceiling.',
+                keywords: 'Magnet, Invert, Flip, Polar', input: 'SPACE or CLICK to Flip'
             }
         ];
 
         const grid = document.getElementById('modes-grid');
         
+        const renderDiff = (d) => {
+            let str = '';
+            for(let i=1; i<=5; i++) str += `<span class="diff-dot ${i>d?'off':''}">◆</span>`;
+            return str;
+        };
+
         window.addEventListener('load', () => {
             modes.forEach((mode, idx) => {
                 const card = document.createElement('div');
@@ -189,27 +225,35 @@
                 card.innerHTML = `
                     <div id="prev-${idx}" class="type-preview"></div>
                     <div class="type-content">
-                        <span class="type-tag">${mode.cat}</span>
+                        <div class="type-header">
+                            <span class="type-tag">${mode.cat}</span>
+                            <div class="difficulty">${renderDiff(mode.diff)}</div>
+                        </div>
                         <h3>${mode.type}</h3>
                         <p class="type-desc">${mode.desc}</p>
-                        <div class="type-meta">
-                            <span><span class="meta-label">KEY:</span>${mode.keywords}</span>
-                            <span><span class="meta-label">IN:</span>${mode.input}</span>
+                        <div class="type-info-row">
+                            <div class="info-item">
+                                <span class="info-label">KEYWORDS</span>
+                                <span class="info-value">${mode.keywords}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">CONTROLS</span>
+                                <span class="info-value">${mode.input}</span>
+                            </div>
                         </div>
                     </div>
                 `;
                 grid.appendChild(card);
 
-                // Initialize mini-engine
                 setTimeout(() => {
                     new LoadiEngine(`prev-${idx}`, {
                         gameType: mode.type,
-                        category: mode.cat,
+                        category: mode.type, // Map directly for simplicity in preview
                         theme: { background: '#000', playerColor: '#fff', obstacleColor: '#ff0055', accentColor: '#00f2ff' },
                         sprites: { player: null, obstacle: null },
                         autoPlay: true
                     });
-                }, 100 + idx * 100);
+                }, 100 + idx * 80);
             });
         });
     </script>
