@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return x - Math.floor(x);
     }
 
-    // Keyword Category Analysis
     function analyzeKeyword(keyword) {
         const kw = keyword.toLowerCase();
         
@@ -39,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (spaceTerms.some(t => kw.includes(t))) return 'SPACE';
         if (waterTerms.some(t => kw.includes(t))) return 'WATER';
         
-        // Default based on seed if no match
         const categories = ['LAND', 'AIR', 'SPACE', 'WATER'];
         return categories[stringToSeed(kw) % categories.length];
     }
@@ -90,32 +88,27 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let y = 0; y < 8; y++) {
             for (let x = 0; x < 4; x++) {
                 let prob = 0.5;
-                
                 if (isPlayer) {
-                    if (category === 'SPACE') { // Rocket-ish
+                    if (category === 'SPACE') {
                         prob = (x < 2 && y > 1 && y < 7) ? 0.2 : 0.8;
                         if (y === 1 && x === 1) prob = 0.1;
-                    } else if (category === 'AIR' || category === 'WATER') { // Bird/Fish-ish
+                    } else if (category === 'AIR' || category === 'WATER') {
                         prob = (y > 2 && y < 6) ? 0.2 : 0.7;
                         if (x > 1) prob -= 0.2;
                     }
-                } else { // Obstacle
-                    if (category === 'SPACE') prob = 0.4; // Meteors
-                    else prob = 0.3; // Generic
+                } else {
+                    if (category === 'SPACE') prob = 0.4;
+                    else prob = 0.3;
                 }
-
                 const val = rand(seed + y * 13 + x) > prob ? 1 : 0;
                 grid[y * 8 + x] = val;
-                grid[y * 8 + (7 - x)] = val; // Symmetry
+                grid[y * 8 + (7 - x)] = val;
             }
         }
-        
-        // Ensure core
         if (isPlayer) {
             grid[3 * 8 + 3] = 1; grid[3 * 8 + 4] = 1;
             grid[4 * 8 + 3] = 1; grid[4 * 8 + 4] = 1;
         }
-
         return grid;
     }
 
@@ -145,23 +138,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI Interactions ---
 
-    btnGenerate.addEventListener('click', () => {
+    btnGenerate.addEventListener('click', async () => {
         const keyword = keywordInput.value.trim();
         if (!keyword) return;
 
-        previewStatus.innerText = "ANALYZING CONTEXT...";
+        // Cleanup previous instance
+        if (engineInstance) {
+            engineInstance.destroy();
+            engineInstance = null;
+        }
+
+        previewStatus.innerText = "INITIALIZING SYSTEM...";
         previewStatus.style.color = "#ffbd2e";
         
-        setTimeout(() => {
+        try {
+            // Give UI a tiny moment to update status
+            await new Promise(r => setTimeout(r, 50));
+            
+            previewStatus.innerText = "MAPPING KEYWORD CONTEXT...";
             currentConfig = generateGameConfig(keyword);
+            
             statTheme.innerText = currentConfig.category;
             statTheme.style.color = currentConfig.theme.accentColor;
             statHash.innerText = `0x${currentConfig.seed.toString(16).toUpperCase()}`;
             
+            previewStatus.innerText = "SPAWNING ENGINE...";
             engineInstance = new LoadiEngine('game-container', currentConfig);
             
             const disableAuto = () => {
-                if (engineInstance.config.autoPlay) {
+                if (engineInstance && engineInstance.config.autoPlay) {
                     engineInstance.config.autoPlay = false;
                     previewStatus.innerText = "MANUAL CONTROL ACTIVE";
                     previewStatus.style.color = "#00f2ff";
@@ -174,8 +179,11 @@ document.addEventListener('DOMContentLoaded', () => {
             previewStatus.innerText = `SYSTEM ACTIVE - ${currentConfig.gameType} MODE`;
             previewStatus.style.color = "#27c93f";
             controls.classList.remove('hidden');
-
-        }, 800);
+        } catch (error) {
+            console.error("Generation Error:", error);
+            previewStatus.innerText = "CORE SYSTEM ERROR - RETRYING...";
+            previewStatus.style.color = "#ff5f56";
+        }
     });
 
     btnDownload.addEventListener('click', () => {

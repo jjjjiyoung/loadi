@@ -28,8 +28,14 @@ class LoadiEngine {
         this.container.innerHTML = '';
         this.container.appendChild(this.canvas);
 
+        // State for managing loop
+        this.isPlaying = false;
+        this.isGameOver = false;
+        this.animationFrameId = null;
+
         this.resize();
-        window.addEventListener('resize', () => this.resize());
+        this.resizeHandler = () => this.resize();
+        window.addEventListener('resize', this.resizeHandler);
 
         // Game State
         this.player = {
@@ -40,8 +46,6 @@ class LoadiEngine {
         this.score = 0;
         this.speed = 4;
         this.difficulty = 1;
-        this.isPlaying = false;
-        this.isGameOver = false;
 
         this.keys = {};
         this.handleInput = this.handleInput.bind(this);
@@ -57,24 +61,33 @@ class LoadiEngine {
         document.addEventListener('keydown', this.keyHandlerDown);
         document.addEventListener('keyup', this.keyHandlerUp);
         this.canvas.addEventListener('mousedown', this.handleInput);
-        this.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInput(); });
+        this.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInput(); }, { passive: false });
 
         this.start();
     }
 
     destroy() {
         this.isPlaying = false;
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+        window.removeEventListener('resize', this.resizeHandler);
         document.removeEventListener('keydown', this.keyHandlerDown);
         document.removeEventListener('keyup', this.keyHandlerUp);
+        this.container.innerHTML = '';
     }
 
     resize() {
-        this.canvas.width = this.container.clientWidth;
-        this.canvas.height = this.container.clientHeight;
+        if (!this.container) return;
+        this.canvas.width = this.container.clientWidth || 300;
+        this.canvas.height = this.container.clientHeight || 200;
         this.scale = this.canvas.height / 200;
         this.groundY = this.canvas.height - (30 * this.scale);
         this.player.w = 20 * this.scale;
         this.player.h = 20 * this.scale;
+        
+        // Re-draw if game is paused/over
+        if (!this.isPlaying) this.draw();
     }
 
     start() {
@@ -346,7 +359,7 @@ class LoadiEngine {
         if (this.isPlaying && !this.isGameOver) {
             this.update();
             this.draw();
-            requestAnimationFrame(() => this.loop());
+            this.animationFrameId = requestAnimationFrame(() => this.loop());
         }
     }
 }
