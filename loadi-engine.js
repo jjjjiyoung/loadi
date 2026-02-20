@@ -28,19 +28,11 @@ class LoadiEngine {
         this.container.innerHTML = '';
         this.container.appendChild(this.canvas);
 
-        // State for managing loop
+        // --- 1. Initialize State First ---
         this.isPlaying = false;
         this.isGameOver = false;
         this.animationFrameId = null;
-
-        this.resize();
-        this.resizeHandler = () => this.resize();
-        window.addEventListener('resize', this.resizeHandler);
-
-        // Game State
-        this.player = {
-            x: 50, y: 0, w: 20, h: 20, dx: 0, dy: 0, jumpPower: 10, grounded: false
-        };
+        this.player = { x: 50, y: 0, w: 20, h: 20, dx: 0, dy: 0, jumpPower: 10, grounded: false };
         this.obstacles = [];
         this.dots = [];
         this.bullets = [];
@@ -50,8 +42,12 @@ class LoadiEngine {
         this.score = 0;
         this.speed = 4;
         this.difficulty = 1;
-
         this.keys = {};
+
+        // --- 2. Then Handle Resize & Draw ---
+        this.resize();
+        this.resizeHandler = () => this.resize();
+        window.addEventListener('resize', this.resizeHandler);
         this.handleInput = this.handleInput.bind(this);
         this.keyHandlerDown = (e) => {
             this.keys[e.code] = true;

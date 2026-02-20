@@ -246,14 +246,20 @@
                 grid.appendChild(card);
 
                 setTimeout(() => {
+                    const catMap = {
+                        'RUNNER': 'LAND', 'DODGE': 'SPACE', 'FLAPPY': 'AIR',
+                        'MAZE': 'MAZE', 'SHOOTER': 'SPACE', 'JUMP': 'AIR',
+                        'PUZZLE': 'CYBER', 'STACK': 'URBAN', 'GRAVITY': 'SPACE'
+                    };
                     new LoadiEngine(`prev-${idx}`, {
                         gameType: mode.type,
-                        category: mode.type, // Map directly for simplicity in preview
+                        category: catMap[mode.type] || 'LAND',
+                        seed: idx * 777,
                         theme: { background: '#000', playerColor: '#fff', obstacleColor: '#ff0055', accentColor: '#00f2ff' },
                         sprites: { player: null, obstacle: null },
                         autoPlay: true
                     });
-                }, 100 + idx * 80);
+                }, 100 + idx * 100);
             });
         });
     </script>
