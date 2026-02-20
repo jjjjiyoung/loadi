@@ -155,6 +155,26 @@ class LoadiEngine {
             this.walls = [];
             this.generateMaze();
             for(let i=0; i<20; i++) this.spawnDot();
+        } else if (type === 'PUZZLE') {
+            this.puzzleGrid = [];
+            const cols = 6, rows = 4;
+            const size = 30 * s;
+            const offsetX = (this.canvas.width - cols * size) / 2;
+            const offsetY = (this.canvas.height - rows * size) / 2;
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    this.puzzleGrid.push({
+                        r, c, x: offsetX + c * size, y: offsetY + r * size,
+                        w: size, h: size,
+                        type: Math.floor(Math.random() * 4)
+                    });
+                }
+            }
+            this.selectedGem = null;
+        } else if (type === 'STACK') {
+            this.stackBlocks = [{ x: (this.canvas.width - 60*s)/2, y: this.canvas.height - 20*s, w: 60*s, h: 20*s }];
+            this.currentStackBlock = { x: 0, y: this.canvas.height - 40*s, w: 60*s, h: 20*s, dir: 1 };
+            this.speed = 3 * s;
         }
         
         this.player.dy = 0;
@@ -207,6 +227,26 @@ class LoadiEngine {
             this.player.grounded = false;
         } else if (this.config.gameType === 'FLAPPY') {
             this.player.dy = -this.jumpPower * 0.65;
+        } else if (this.config.gameType === 'STACK') {
+            const last = this.stackBlocks[this.stackBlocks.length - 1];
+            const overlap = Math.min(this.currentStackBlock.x + this.currentStackBlock.w, last.x + last.w) - Math.max(this.currentStackBlock.x, last.x);
+            
+            if (overlap > 0) {
+                this.stackBlocks.push({ ...this.currentStackBlock });
+                this.score += 100;
+                this.currentStackBlock.y -= this.currentStackBlock.h;
+                if (this.stackBlocks.length > 5) {
+                    this.stackBlocks.shift();
+                    this.stackBlocks.forEach(b => b.y += b.h);
+                    this.currentStackBlock.y += this.currentStackBlock.h;
+                }
+            } else {
+                this.gameOver();
+            }
+        } else if (this.config.gameType === 'PUZZLE') {
+            // Randomize grid on click
+            this.puzzleGrid.forEach(g => g.type = Math.floor(Math.random() * 4));
+            this.score += 10;
         }
     }
 
@@ -232,9 +272,45 @@ class LoadiEngine {
         else if (this.config.gameType === 'MAZE') this.updateMaze(currentSpeed, spawnRate);
         else if (this.config.gameType === 'SHOOTER') this.updateShooter(currentSpeed, spawnRate);
         else if (this.config.gameType === 'JUMP') this.updateJump(currentSpeed, spawnRate);
+        else if (this.config.gameType === 'PUZZLE') this.updatePuzzle();
+        else if (this.config.gameType === 'STACK') this.updateStack(currentSpeed);
 
         this.frame++;
-        if (this.config.gameType !== 'MAZE') this.score = Math.floor(this.frame / 10);
+        if (this.config.gameType !== 'MAZE' && this.config.gameType !== 'PUZZLE' && this.config.gameType !== 'STACK') this.score = Math.floor(this.frame / 10);
+    }
+
+    updatePuzzle() {
+        // Auto-match for preview/autoplay
+        if (this.frame % 60 === 0) {
+            const matches = this.checkPuzzleMatches();
+            if (matches.length > 0) {
+                matches.forEach(gem => gem.type = Math.floor(Math.random() * 4));
+                this.score += matches.length * 10;
+            }
+        }
+    }
+
+    checkPuzzleMatches() {
+        const matches = new Set();
+        // Simple horizontal check
+        for(let r=0; r<4; r++) {
+            for(let c=0; c<4; c++) {
+                const g1 = this.puzzleGrid.find(g => g.r === r && g.c === c);
+                const g2 = this.puzzleGrid.find(g => g.r === r && g.c === c+1);
+                const g3 = this.puzzleGrid.find(g => g.r === r && g.c === c+2);
+                if (g1 && g2 && g3 && g1.type === g2.type && g2.type === g3.type) {
+                    matches.add(g1); matches.add(g2); matches.add(g3);
+                }
+            }
+        }
+        return Array.from(matches);
+    }
+
+    updateStack(speed) {
+        this.currentStackBlock.x += speed * this.currentStackBlock.dir;
+        if (this.currentStackBlock.x < 0 || this.currentStackBlock.x + this.currentStackBlock.w > this.canvas.width) {
+            this.currentStackBlock.dir *= -1;
+        }
     }
 
     updateShooter(speed, spawnRate) {
@@ -548,6 +624,11 @@ class LoadiEngine {
                 if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += 4 * s;
                 else this.player.x -= 4 * s;
             }
+        } else if (this.config.gameType === 'STACK') {
+            const last = this.stackBlocks[this.stackBlocks.length - 1];
+            if (Math.abs(this.currentStackBlock.x - last.x) < 5 * s) {
+                this.handleInput();
+            }
         }
     }
 
@@ -600,6 +681,23 @@ class LoadiEngine {
         if (this.config.gameType === 'JUMP' && this.platforms) {
             ctx.fillStyle = theme.obstacleColor;
             this.platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+        }
+
+        // Draw PUZZLE Gems
+        if (this.config.gameType === 'PUZZLE' && this.puzzleGrid) {
+            const gemColors = [theme.playerColor, theme.obstacleColor, theme.accentColor, '#fff'];
+            this.puzzleGrid.forEach(gem => {
+                ctx.fillStyle = gemColors[gem.type] || '#fff';
+                ctx.fillRect(gem.x + 2, gem.y + 2, gem.w - 4, gem.h - 4);
+            });
+        }
+
+        // Draw STACK Blocks
+        if (this.config.gameType === 'STACK') {
+            ctx.fillStyle = theme.playerColor;
+            this.stackBlocks.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+            ctx.fillStyle = theme.accentColor;
+            ctx.fillRect(this.currentStackBlock.x, this.currentStackBlock.y, this.currentStackBlock.w, this.currentStackBlock.h);
         }
 
         // Draw Theme Particles

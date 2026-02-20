@@ -40,7 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
             URBAN: ['city', 'street', 'car', 'building', 'traffic', 'urban', 'road', '도시', '도로', '빌딩', '자동차'],
             MAZE: ['pacman', 'maze', 'ghost', 'dot', 'eat', 'cookie', 'pixel', 'retro', '팩맨', '미로', '유령', '복고'],
             SHOOTER: ['shoot', 'gun', 'war', 'battle', 'laser', 'attack', 'tank', 'fighter', '총', '전쟁', '레이저', '슈팅'],
-            JUMP: ['jump', 'bounce', 'high', 'top', 'climb', 'spring', 'doodle', '점프', '구름', '높이', '등산']
+            JUMP: ['jump', 'bounce', 'high', 'top', 'climb', 'spring', 'doodle', '점프', '구름', '높이', '등산'],
+            PUZZLE: ['puzzle', 'match', 'gem', 'candy', 'brain', 'logic', '퍼즐', '매치', '보석', '사탕'],
+            STACK: ['stack', 'tetris', 'block', 'tower', 'build', 'brick', '스택', '테트리스', '블록', '타워', '건설']
         };
 
         for (const [theme, words] of Object.entries(themes)) {
@@ -55,6 +57,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const hue = Math.floor(seededRandom(seed) * 360);
         
         switch(category) {
+            case 'PUZZLE':
+                return {
+                    background: '#2c3e50',
+                    playerColor: '#f1c40f', obstacleColor: '#e67e22', accentColor: '#3498db',
+                    gameType: 'PUZZLE'
+                };
+            case 'STACK':
+                return {
+                    background: '#1a1a1a',
+                    playerColor: '#00ffcc', obstacleColor: '#333333', accentColor: '#ff00ff',
+                    gameType: 'STACK'
+                };
             case 'SHOOTER':
                 return {
                     background: '#1a1a2e',
@@ -167,10 +181,22 @@ document.addEventListener('DOMContentLoaded', () => {
                             prob = (y > 2 && y < 6) ? 0.3 : 0.8;
                             if (y === 7) prob = 0.1; // Feet
                             break;
+                        case 'PUZZLE': // Gem shape
+                            prob = (Math.abs(x-3.5) + Math.abs(y-3.5) < 4) ? 0.2 : 0.9;
+                            break;
+                        case 'STACK': // Perfect Block
+                            prob = (x > 0 && y > 0 && y < 7) ? 0.1 : 0.9;
+                            break;
                     }
                 } else {
                     // Specialized Obstacles per Theme
                     switch(category) {
+                        case 'PUZZLE': // Alternative Gem
+                            prob = (x > 1 && y > 1 && x < 4 && y < 6) ? 0.2 : 0.8;
+                            break;
+                        case 'STACK': // Shadow Block
+                            prob = (x > 2 && y > 2) ? 0.3 : 0.7;
+                            break;
                         case 'SHOOTER': // Enemy Ship
                             prob = (y < 4 && x > 0) ? 0.3 : 0.8;
                             break;
