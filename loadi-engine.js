@@ -148,12 +148,13 @@ class LoadiEngine {
             this.gravity = (0.25 + (seed % 2) * 0.05) * s;
             this.jumpPower = (6 + (seed % 3) * 0.5) * s;
         } else if (type === 'MAZE') {
-            this.player.x = this.canvas.width / 2;
-            this.player.y = this.canvas.height / 2;
-            this.speed = 2.5 * s;
+            this.player.x = 30 * s;
+            this.player.y = 30 * s;
+            this.speed = 2 * s;
             this.dots = [];
-            // Initial dots
-            for(let i=0; i<10; i++) this.spawnDot();
+            this.walls = [];
+            this.generateMaze();
+            for(let i=0; i<20; i++) this.spawnDot();
         }
         
         this.player.dy = 0;
@@ -162,14 +163,37 @@ class LoadiEngine {
         this.trail = [];
     }
 
+    generateMaze() {
+        const s = this.scale || 1;
+        const cols = 15;
+        const rows = 10;
+        const cellW = this.canvas.width / cols;
+        const cellH = this.canvas.height / rows;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                // Outer walls and random internal walls
+                if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1 || 
+                    (Math.random() > 0.75 && !(r === 1 && c === 1))) {
+                    this.walls.push({ x: c * cellW, y: r * cellH, w: cellW, h: cellH });
+                }
+            }
+        }
+    }
+
     spawnDot() {
         const s = this.scale || 1;
-        this.dots.push({
-            x: Math.random() * (this.canvas.width - 10 * s) + 5 * s,
-            y: Math.random() * (this.canvas.height - 10 * s) + 5 * s,
-            w: 6 * s,
-            h: 6 * s
-        });
+        let valid = false;
+        let dot = null;
+        while (!valid) {
+            dot = {
+                x: Math.random() * (this.canvas.width - 20 * s) + 10 * s,
+                y: Math.random() * (this.canvas.height - 20 * s) + 10 * s,
+                w: 6 * s, h: 6 * s
+            };
+            valid = !this.walls.some(w => this.checkCollision(dot, w));
+        }
+        this.dots.push(dot);
     }
 
     handleInput() {
@@ -245,24 +269,24 @@ class LoadiEngine {
         // Enemies & Collision
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             let obs = this.obstacles[i];
+            let destroyed = false;
             obs.y += speed * 0.8;
             
-            // Player collision
             if (this.checkCollision(this.player, obs)) this.onHit();
 
-            // Bullet collision
             for (let b = this.bullets.length - 1; b >= 0; b--) {
                 if (this.checkCollision(this.bullets[b], obs)) {
                     obs.hp--;
                     this.bullets.splice(b, 1);
                     if (obs.hp <= 0) {
-                        this.score += 50; // Bonus points
+                        this.score += 50;
                         this.obstacles.splice(i, 1);
+                        destroyed = true;
                         break;
                     }
                 }
             }
-            if (obs.y > this.canvas.height) this.obstacles.splice(i, 1);
+            if (!destroyed && obs.y > this.canvas.height) this.obstacles.splice(i, 1);
         }
     }
 
@@ -319,14 +343,20 @@ class LoadiEngine {
 
     updateMaze(speed, spawnRate) {
         const s = this.scale || 1;
+        const oldX = this.player.x;
+        const oldY = this.player.y;
         
-        // 4-Way Movement
         if (this.keys['ArrowUp']) this.player.y -= speed;
         if (this.keys['ArrowDown']) this.player.y += speed;
         if (this.keys['ArrowLeft']) this.player.x -= speed;
         if (this.keys['ArrowRight']) this.player.x += speed;
 
-        // Clamp to screen
+        // Wall Collision
+        if (this.walls.some(w => this.checkCollision(this.player, w))) {
+            this.player.x = oldX;
+            this.player.y = oldY;
+        }
+
         this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
         this.player.y = Math.max(0, Math.min(this.canvas.height - this.player.h, this.player.y));
 
@@ -543,6 +573,12 @@ class LoadiEngine {
         } else ctx.fillStyle = bg;
         
         ctx.fillRect(0, 0, w, h);
+
+        // Draw MAZE Walls
+        if (this.config.gameType === 'MAZE' && this.walls) {
+            ctx.fillStyle = theme.accentColor || '#00f';
+            this.walls.forEach(wall => ctx.fillRect(wall.x, wall.y, wall.w, wall.h));
+        }
 
         // Draw MAZE Dots
         if (this.config.gameType === 'MAZE' && this.dots) {
