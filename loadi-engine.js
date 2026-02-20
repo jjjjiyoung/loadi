@@ -43,12 +43,23 @@ class LoadiEngine {
 
         // Input
         this.handleInput = this.handleInput.bind(this);
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') this.handleInput();
-        });
-        this.canvas.addEventListener('click', this.handleInput);
+        this.keyHandler = (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                this.handleInput();
+            }
+        };
+        document.addEventListener('keydown', this.keyHandler);
+        this.canvas.addEventListener('mousedown', this.handleInput);
+        this.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleInput(); });
 
         this.start();
+    }
+
+    // Clean up to prevent multiple listeners on regeneration
+    destroy() {
+        this.isPlaying = false;
+        document.removeEventListener('keydown', this.keyHandler);
     }
 
     resize() {
@@ -69,7 +80,7 @@ class LoadiEngine {
         this.obstacles = [];
         this.frame = 0;
         this.score = 0;
-        this.speed = 4;
+        this.speed = 4.5; // Slightly faster start
         this.isGameOver = false;
     }
 

@@ -42,16 +42,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function generateSprite(seed) {
-        // Generate 8x8 pixel art (symmetrical)
+        // More sophisticated 8x8 pixel icon generator
+        // Structure: 0-2 (Top/Head), 3-5 (Middle/Body), 6-7 (Bottom/Legs)
         const grid = new Array(64).fill(0);
         
+        const getVal = (s, prob) => seededRandom(s) > prob ? 1 : 0;
+
         for (let y = 0; y < 8; y++) {
-            for (let x = 0; x < 4; x++) { // Left half
-                const val = seededRandom(seed + y * 10 + x) > 0.5 ? 1 : 0;
+            let prob = 0.5;
+            if (y < 2) prob = 0.6; // Head part (tends to be narrower)
+            if (y >= 2 && y <= 5) prob = 0.3; // Body part (thicker)
+            if (y > 5) prob = 0.7; // Legs (sparse)
+
+            for (let x = 1; x < 4; x++) { // Center 6 columns (1 to 6)
+                const val = getVal(seed + y * 13 + x, prob);
                 grid[y * 8 + x] = val;
-                grid[y * 8 + (7 - x)] = val; // Mirror to right
+                grid[y * 8 + (7 - x)] = val; // Symmetrical
             }
         }
+        
+        // Ensure some core pixels are always there (the "soul" of the icon)
+        grid[3 * 8 + 3] = 1; grid[3 * 8 + 4] = 1;
+        grid[4 * 8 + 3] = 1; grid[4 * 8 + 4] = 1;
+        
         return grid;
     }
 
@@ -59,19 +72,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const seed = stringToSeed(keyword);
         const palette = generatePalette(seed);
         
-        // Generate distinct sprites for player and obstacle
-        const playerSprite = generateSprite(seed);
-        const obstacleSprite = generateSprite(seed + 100);
-
         return {
             keyword: keyword,
             seed: seed,
             theme: palette,
             sprites: {
-                player: playerSprite,
-                obstacle: obstacleSprite
+                player: generateSprite(seed + 500),
+                obstacle: generateSprite(seed + 999)
             },
-            autoPlay: true // Default for preview
+            autoPlay: true 
         };
     }
 
@@ -81,26 +90,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const keyword = keywordInput.value.trim();
         if (!keyword) return;
 
-        // UI Feedback
-        previewStatus.innerText = "GENERATING ASSETS...";
+        previewStatus.innerText = "GENERATING ICONIC ASSETS...";
         previewStatus.style.color = "#ffbd2e";
         
-        // Simulate processing delay for effect
         setTimeout(() => {
             currentConfig = generateGameConfig(keyword);
-            
-            // Update Stats
             statTheme.innerText = currentConfig.theme.accentColor;
             statTheme.style.color = currentConfig.theme.accentColor;
             statHash.innerText = `0x${currentConfig.seed.toString(16).toUpperCase()}`;
             
-            // Init Game
-            if (engineInstance) {
-                // Ideally we'd destroy the old instance, but replacing innerHTML does the trick mostly
-            }
-            
             engineInstance = new LoadiEngine('game-container', currentConfig);
             
+            // Interaction Listener to disable Auto-pilot
+            const disableAuto = () => {
+                if (engineInstance.config.autoPlay) {
+                    engineInstance.config.autoPlay = false;
+                    previewStatus.innerText = "MANUAL CONTROL ACTIVE";
+                    previewStatus.style.color = "#00f2ff";
+                }
+            };
+
+            window.addEventListener('keydown', (e) => { if(e.code === 'Space') disableAuto(); }, {once: true});
+            document.getElementById('game-container').addEventListener('mousedown', disableAuto, {once: true});
+
             previewStatus.innerText = "SYSTEM ACTIVE - AUTO PILOT";
             previewStatus.style.color = "#27c93f";
             controls.classList.remove('hidden');
