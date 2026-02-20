@@ -147,15 +147,21 @@ class LoadiEngine {
             this.speed = 3.5 + (seed % 2);
             this.gravity = (0.25 + (seed % 2) * 0.05) * s;
             this.jumpPower = (6 + (seed % 3) * 0.5) * s;
-        } else if (type === 'MAZE') {
-            this.player.x = 30 * s;
-            this.player.y = 30 * s;
-            this.speed = 2 * s;
-            this.dots = [];
-            this.walls = [];
-            this.generateMaze();
-            for(let i=0; i<20; i++) this.spawnDot();
-        } else if (type === 'PUZZLE') {
+                } else if (type === 'MAZE') {
+                    this.walls = [];
+                    this.generateMaze();
+                    // Find safe spawn
+                    this.player.x = 40 * s;
+                    this.player.y = 40 * s;
+                    while (this.walls.some(w => this.checkCollision(this.player, w))) {
+                        this.player.x += 10 * s;
+                        this.player.y += 10 * s;
+                    }
+                    this.speed = 2 * s;
+                    this.dots = [];
+                    for(let i=0; i<20; i++) this.spawnDot();
+                }
+         else if (type === 'PUZZLE') {
             this.puzzleGrid = [];
             const cols = 6, rows = 4;
             const size = 30 * s;
@@ -192,9 +198,11 @@ class LoadiEngine {
 
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                // Outer walls and random internal walls
-                if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1 || 
-                    (Math.random() > 0.75 && !(r === 1 && c === 1))) {
+                // Outer walls
+                const isEdge = r === 0 || r === rows - 1 || c === 0 || c === cols - 1;
+                // Random inner walls, but keep top-left clear
+                const isSpawnSafe = r < 3 && c < 3;
+                if (isEdge || (Math.random() > 0.7 && !isSpawnSafe)) {
                     this.walls.push({ x: c * cellW, y: r * cellH, w: cellW, h: cellH });
                 }
             }
@@ -427,12 +435,13 @@ class LoadiEngine {
         if (this.keys['ArrowLeft']) this.player.x -= speed;
         if (this.keys['ArrowRight']) this.player.x += speed;
 
-        // Wall Collision
+        // Wall Collision for Player
         if (this.walls.some(w => this.checkCollision(this.player, w))) {
             this.player.x = oldX;
             this.player.y = oldY;
         }
 
+        // Clamp to screen
         this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
         this.player.y = Math.max(0, Math.min(this.canvas.height - this.player.h, this.player.y));
 
@@ -445,26 +454,44 @@ class LoadiEngine {
             }
         }
 
-        // Spawn Enemies (Ghosts)
+        // Spawn Enemies (Ghosts) inside maze paths
         if (this.frame % (spawnRate * 2) === 0 && this.obstacles.length < 4) {
-            this.obstacles.push({
-                x: Math.random() > 0.5 ? 0 : this.canvas.width,
-                y: Math.random() * this.canvas.height,
-                w: 20 * s,
-                h: 20 * s,
-                type: 'GHOST'
-            });
+            let gx, gy, valid = false;
+            while(!valid) {
+                gx = Math.random() * (this.canvas.width - 20 * s);
+                gy = Math.random() * (this.canvas.height - 20 * s);
+                const temp = { x: gx, y: gy, w: 20*s, h: 20*s };
+                valid = !this.walls.some(w => this.checkCollision(temp, w)) && 
+                        Math.hypot(this.player.x - gx, this.player.y - gy) > 100 * s;
+            }
+            this.obstacles.push({ x: gx, y: gy, w: 20*s, h: 20*s, type: 'GHOST', vx: speed * 0.5, vy: 0 });
         }
 
-        // Move Ghosts (Simple Chasing AI)
+        // Move Ghosts with Wall Avoidance
         this.obstacles.forEach(obs => {
+            const ox = obs.x;
+            const oy = obs.y;
+            
+            // Simple logic: try chasing, if hit wall, pick random direction
             const dx = this.player.x - obs.x;
             const dy = this.player.y - obs.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
+            
             if (dist > 0) {
-                obs.x += (dx / dist) * speed * 0.6;
-                obs.y += (dy / dist) * speed * 0.6;
+                const moveX = (dx / dist) * speed * 0.5;
+                const moveY = (dy / dist) * speed * 0.5;
+                
+                obs.x += moveX;
+                if (this.walls.some(w => this.checkCollision(obs, w))) {
+                    obs.x = ox; // Hit wall x
+                }
+                
+                obs.y += moveY;
+                if (this.walls.some(w => this.checkCollision(obs, w))) {
+                    obs.y = oy; // Hit wall y
+                }
             }
+
             if (this.checkCollision(this.player, obs)) this.onHit();
         });
     }
