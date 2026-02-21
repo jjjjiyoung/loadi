@@ -134,6 +134,14 @@ class LoadiEngine {
         this.gravity = (0.5 + (seed % 3) * 0.1) * s;
         this.jumpPower = (9 + (seed % 5) * 0.5) * s;
 
+        // Default Reset Positions
+        this.player.dy = 0;
+        this.player.dx = 0;
+        this.player.grounded = false;
+        this.player.x = 50 * s;
+        this.player.y = this.canvas.height / 2;
+        this.trail = [];
+
         if (type === 'RUNNER') {
             this.player.x = 50 * s;
             this.player.y = this.groundY - this.player.h;
@@ -150,8 +158,8 @@ class LoadiEngine {
             this.jumpPower = (6 + (seed % 3) * 0.5) * s;
         } else if (type === 'MAZE') {
             this.generateMaze();
-            this.player.x = cellW_maze * 1.5;
-            this.player.y = cellH_maze * 1.5;
+            this.player.x = this.cellW_maze * 1.5;
+            this.player.y = this.cellH_maze * 1.5;
             this.speed = 2 * s;
             for(let i=0; i<20; i++) this.spawnDot();
         } else if (type === 'PUZZLE') {
@@ -186,19 +194,20 @@ class LoadiEngine {
             this.player.x = this.canvas.width / 2 - 10 * s;
             this.player.y = this.canvas.height - 40 * s;
             this.speed = 3 * s;
+        } else if (type === 'JUMP') {
+            this.player.x = this.canvas.width / 2;
+            this.player.y = this.canvas.height - 50 * s;
+            this.player.dy = -this.jumpPower;
+            this.platforms = [{ x: this.canvas.width / 2 - 20 * s, y: this.canvas.height - 30 * s, w: 40 * s, h: 8 * s }];
+            this.speed = 3 * s;
         }
-        
-        this.player.dy = 0;
-        this.player.dx = 0;
-        this.player.grounded = false;
-        this.trail = [];
     }
 
     generateMaze() {
         const s = this.scale || 1;
         const cols = 15, rows = 10;
-        window.cellW_maze = this.canvas.width / cols;
-        window.cellH_maze = this.canvas.height / rows;
+        this.cellW_maze = this.canvas.width / cols;
+        this.cellH_maze = this.canvas.height / rows;
 
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
@@ -208,7 +217,7 @@ class LoadiEngine {
                 const isSpawnSafe = r < 3 && c < 3;
                 
                 if (isEdge || (isPillar && !isSpawnSafe)) {
-                    this.walls.push({ x: c * window.cellW_maze, y: r * window.cellH_maze, w: window.cellW_maze, h: window.cellH_maze });
+                    this.walls.push({ x: c * this.cellW_maze, y: r * this.cellH_maze, w: this.cellW_maze, h: this.cellH_maze });
                 }
             }
         }
@@ -490,7 +499,7 @@ class LoadiEngine {
             const target = this.obstacles[0];
             if (target) { if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += speed; else this.player.x -= speed; }
         } else if (type === 'JUMP') {
-            const target = this.platforms.find(p => p.y < this.player.y && p.y > this.player.y - 150 * s);
+            const target = this.platforms.find(p => p.y > this.player.y && p.y < this.player.y + 150 * s);
             if (target) { if (target.x + target.w/2 > this.player.x + this.player.w/2) this.player.x += 4 * s; else this.player.x -= 4 * s; }
         } else if (type === 'STACK') {
             const last = this.stackBlocks[this.stackBlocks.length - 1];
